@@ -205,6 +205,27 @@ function configureQueueApi(app: Hono) {
     return r.ok ? c.json(r.data) : c.json({ error: r.error }, 500);
   }));
 
+  // Yash's tokened link, so Katey can re-send it without asking Zo. Served only from
+  // behind the admin gate — the token must never appear in any public page or bundle,
+  // which is why this is an API response and not something the /review HTML ships with.
+  app.get("/api/admin/upload-link", admin(async (c) => {
+    if (!UPLOAD_TOKEN) return c.json({ error: "no upload token configured" }, 500);
+    const host = c.req.header("x-forwarded-host") || c.req.header("host")
+      || `localhost:${LOCAL_PORT}`;
+    // Scheme from the host, not from x-forwarded-proto: the tunnel terminates TLS and
+    // reports its inside leg (http), which would hand Katey a link that redirects at
+    // best. Anything that is not localhost is only reachable over https.
+    const proto = /^(localhost|127\.)/.test(host) ? "http" : "https";
+    return c.json({ url: `${proto}://${host}/add?k=${encodeURIComponent(UPLOAD_TOKEN)}` });
+  }));
+
+  // The data browser: everything the store holds, read-only. The webqueue spawn never
+  // receives the API key (envFor strips it for every command except extract).
+  app.get("/api/admin/browse", admin(async (c) => {
+    const r = await webqueue("browse");
+    return r.ok ? c.json(r.data) : c.json({ error: r.error }, 500);
+  }));
+
   app.get("/api/admin/batches/:id", admin(async (c) => {
     const id = safeBatchId(c.req.param("id"));
     if (!id) return c.json({ error: "bad batch id" }, 400);

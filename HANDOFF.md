@@ -167,6 +167,39 @@ There is now a web path onto the map, running inside the hosted console at
   background); Gate 2 shows every extracted/mapped row, lets Katey exclude rows *with a
   reason, kept never deleted*, and publishes.
 
+Added later the same day (2026-09-19), the console UX build on top of those two pages:
+
+- **The three surfaces link to each other.** The map sidebar's footer carries a discreet
+  "Review queue →"; `/add` links back to the map; `/review` shows Yash's tokened upload
+  link with a copy button — after the password only. The token is returned by an
+  admin-gated API and appears in no public page or built bundle (grep the dist to check;
+  that is the acceptance test).
+- **`/review` has a Data tab** — the backend store, read-only: every published event
+  with its origin labelled (`baseline`, or the batch id that published it), batch
+  history with what was actually billed, Gate-2 exclusions with their reasons, and
+  schema-rejected rows. Filterable, sortable, CSV-exportable. Publishing and excluding
+  stay in the per-batch flow; this view can change nothing.
+- **The sidebar search covers everything navigable**: venues (as before, old names and
+  off-year venues included), operators (picking one applies the operator lens), and
+  contract events (picking one flies to the venue and opens its panel), grouped under
+  headings in one dropdown.
+- **Citations.** Events can carry `extras.citation` (author, url, database, accessed) —
+  deliberately inside `extras`, never new top-level columns: EVENT_FIELDS also generates
+  the extraction tool schema, and widening it would change every payload hash and
+  invalidate the 366 paid cached extractions. New uploads capture the fields
+  automatically — typed Author/URL on the paste form, Author/URL columns (or a dataset
+  URL) in the CSV mapping, a deterministic scan of `Author:`/`Database:`/URL lines in
+  uploaded exports, and an automatic access date. The Data tab renders MLA 9 and APA 7
+  from stored fields only, flags what is missing ("no author on record"), never fills
+  anything in, and exports a bibliography of the filtered view.
+- **The 178 baseline events have no citation fields yet.** Filling them needs
+  `.venv/bin/python -m pipeline.cite --backfill`, and that needs `pipeline/articles/raw/`
+  — the gitignored corpus on Elian's machine, not on the server. Run it there, commit
+  the updated `pipeline/webqueue/baseline_contract_events.json`, push; the server pulls
+  and republishes. The command reports exactly what it found and wrote, writes only
+  fields actually printed in the exports, and refuses to guess a title match rather than
+  credit one article's author to another's event.
+
 **The merge design, because it is the part that protects the map:** the canonical
 `output/contract_events.json` on the server is always rebuilt as the committed baseline
 (`pipeline/webqueue/baseline_contract_events.json`, the 178 pre-web events) **plus** every

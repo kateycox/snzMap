@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { S, font, mono, fmtUsd, fmtPct, jsonFetch, STATE_BADGE, OUTCOME_BADGE } from '../upload/shared';
+import { DataTab } from './DataTab';
 
 /** Katey's page — both gates live here.
  * Gate 1 (spend): the exact quote, then Approve & extract.
@@ -140,6 +141,54 @@ function EventRow({ ev, snippet, excluded, onExclude, onUndo }: {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/** Yash's tokened upload link, fetched only through the admin-gated API — the token is
+ * never embedded in this page's bundle, which is served without a password. */
+function UploadLinkCard() {
+  const [url, setUrl] = useState('');
+  const [error, setError] = useState('');
+  const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    jsonFetch('/api/admin/upload-link')
+      .then((r) => setUrl(r.url))
+      .catch((e) => setError(String(e.message || e)));
+  }, []);
+  if (error) return <div style={{ color: S.error, fontSize: 12, marginBottom: 14 }}>{error}</div>;
+  if (!url) return null;
+  return (
+    <div style={{
+      background: S.panel, border: `1px solid ${S.border}`, borderRadius: 8,
+      padding: '10px 14px', marginBottom: 16, display: 'flex', gap: 10,
+      alignItems: 'center', flexWrap: 'wrap',
+    }}>
+      <span style={{ fontSize: 12, fontWeight: 700, color: S.heading, whiteSpace: 'nowrap' }}>
+        Yash's upload link
+      </span>
+      <code style={{
+        fontFamily: mono, fontSize: 11.5, color: S.text, background: S.surface,
+        border: `1px solid ${S.border}`, borderRadius: 5, padding: '4px 8px',
+        overflowWrap: 'anywhere', flex: '1 1 320px',
+      }}>{url}</code>
+      <button style={{ ...ghost, padding: '4px 12px', fontSize: 12 }} onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(url);
+        } catch {
+          const ta = document.createElement('textarea');
+          ta.value = url;
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          ta.remove();
+        }
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      }}>{copied ? 'Copied ✓' : 'Copy'}</button>
+      <span style={{ fontSize: 11, color: S.muted, flexBasis: '100%' }}>
+        The link is the whole credential — send it to Yash and nobody else.
+      </span>
     </div>
   );
 }
@@ -415,6 +464,7 @@ function App() {
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [batches, setBatches] = useState<any[]>([]);
   const [open, setOpen] = useState<string | null>(null);
+  const [tab, setTab] = useState<'queue' | 'data'>('queue');
   const [error, setError] = useState('');
 
   const load = useCallback(async () => {
@@ -447,7 +497,7 @@ function App() {
       fontFamily: font, color: S.text, background: S.surface, minHeight: '100vh',
       padding: '32px 16px',
     }}>
-      <div style={{ maxWidth: 900, margin: '0 auto' }}>
+      <div style={{ maxWidth: tab === 'data' && !open ? 1100 : 900, margin: '0 auto' }}>
         {!open && (
           <>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
@@ -455,18 +505,30 @@ function App() {
                 SNZ Map — review queue
               </div>
               <a href="/console" style={{ fontSize: 13, color: S.accent }}>console ↗</a>
+              <span style={{ flex: 1 }} />
+              <button style={{ ...ghost, padding: '4px 12px', fontSize: 12,
+                borderColor: tab === 'queue' ? S.accent : S.border }}
+                onClick={() => setTab('queue')}>Queue</button>
+              <button style={{ ...ghost, padding: '4px 12px', fontSize: 12,
+                borderColor: tab === 'data' ? S.accent : S.border }}
+                onClick={() => setTab('data')}>Data</button>
             </div>
             <div style={{ fontSize: 13, color: S.muted, margin: '6px 0 18px' }}>
-              Two gates, both yours: approve the spend, then approve the content. The map
-              only changes when you hit Publish.
+              {tab === 'queue'
+                ? 'Two gates, both yours: approve the spend, then approve the content. The '
+                  + 'map only changes when you hit Publish.'
+                : 'Everything the backend store holds — published events, batch history, '
+                  + 'exclusions, rejections. Read-only.'}
             </div>
             {error && <div style={{ color: S.error, fontSize: 13 }}>{error}</div>}
-            {batches.length === 0 && (
+            {tab === 'data' && <DataTab />}
+            {tab === 'queue' && <UploadLinkCard />}
+            {tab === 'queue' && batches.length === 0 && (
               <div style={{ ...box, color: S.muted, fontSize: 13 }}>
                 No batches yet. When Yash drops something on his upload link it appears here.
               </div>
             )}
-            {batches.map((b) => (
+            {tab === 'queue' && batches.map((b) => (
               <div key={b.id} onClick={() => setOpen(b.id)}
                 style={{
                   ...box, marginBottom: 8, cursor: 'pointer', display: 'flex', gap: 12,

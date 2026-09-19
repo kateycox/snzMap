@@ -12,6 +12,8 @@
  * so a surprising result explains itself.
  */
 
+import type { LoadedEvidence, VenueEvidence } from './evidenceTransform';
+import type { OperatorRow } from './operatorLens';
 import { nameAtYear, type VenueProperties } from './spineTransform';
 
 export interface VenueHit {
@@ -105,6 +107,118 @@ export function searchVenues(
       a.hit.venue.canonical_name.localeCompare(b.hit.venue.canonical_name)
   );
   return scored.slice(0, limit).map((s) => s.hit);
+}
+
+/**
+ * The other two things a person types into the one search box: an operator, or something
+ * they remember about a contract event. Both were invisible before — typing "Aramark"
+ * into a venue-only search returned nothing, which read as "Aramark is not in here"
+ * when the honest answer is "Aramark is a different kind of thing, here it is".
+ */
+
+export interface OperatorSearchHit {
+  name: string;
+  /** Where the console knows this operator from — stated so an empty-looking lens
+   *  (an operator with no venue-level awards) does not read as a broken pick. */
+  note: string;
+}
+
+export interface EventSearchHit {
+  venueEvidence: VenueEvidence;
+  /** Display line: operator — event type at venue. */
+  label: string;
+  sub: string;
+}
+
+const score = (folded: string, q: string): number | null =>
+  folded === q ? 0
+    : folded.startsWith(q) ? 1
+      : folded.includes(` ${q}`) ? 2
+        : folded.includes(q) ? 3
+          : null;
+
+/**
+ * Operators from both places the console knows them: the federal/labor profiles (the
+ * operator lens rows) and the article evidence. Union, not intersection — an operator
+ * only the articles name is still a real pick, it just lights no federal rings.
+ */
+export function searchOperators(
+  operatorRows: OperatorRow[],
+  evidence: LoadedEvidence | null,
+  query: string,
+  limit = 4
+): OperatorSearchHit[] {
+  const q = fold(query);
+  if (q.length < 2) return [];
+
+  const known = new Map<string, string>();
+  for (const r of operatorRows) {
+    const bits = [];
+    if (r.federalAwards) bits.push(`${r.federalAwards.toLocaleString()} federal awards`);
+    if (r.cases) bits.push(`${r.cases.toLocaleString()} wage & hour cases`);
+    known.set(r.operator, bits.length ? bits.join(' · ') : 'in the operator records');
+  }
+  for (const v of evidence?.venues ?? []) {
+    for (const op of v.operators) {
+      if (!known.has(op)) known.set(op, 'named in the articles');
+    }
+  }
+
+  const scored: { hit: OperatorSearchHit; s: number }[] = [];
+  for (const [name, note] of known) {
+    const s = score(fold(name), q);
+    if (s !== null) scored.push({ hit: { name, note }, s });
+  }
+  scored.sort((a, b) => a.s - b.s || a.hit.name.localeCompare(b.hit.name));
+  return scored.slice(0, limit).map((x) => x.hit);
+}
+
+/**
+ * Contract events, matched on the text a person might remember: operator, venue name
+ * (canonical or as the article wrote it), headline, event type. Only events that landed
+ * on a spine venue are searchable — an event with no venue has nowhere to focus, and it
+ * is reachable through the data browser instead.
+ */
+export function searchEvents(
+  evidence: LoadedEvidence | null,
+  query: string,
+  limit = 6
+): EventSearchHit[] {
+  const q = fold(query);
+  if (!evidence || q.length < 2) return [];
+
+  const scored: { hit: EventSearchHit; s: number; year: number }[] = [];
+  for (const v of evidence.venues) {
+    for (const c of v.claims) {
+      const haystacks = [
+        c.operator_normalized, c.operator, v.venueName, c.venue_name_as_written,
+        c.source_title, c.event_type,
+      ];
+      let best: number | null = null;
+      for (const h of haystacks) {
+        if (!h) continue;
+        const s = score(fold(h), q);
+        if (s !== null && (best === null || s < best)) best = s;
+      }
+      if (best === null) continue;
+      const op = c.operator_normalized || c.operator || 'operator unknown';
+      scored.push({
+        s: best,
+        year: c.event_year ?? -Infinity,
+        hit: {
+          venueEvidence: v,
+          label: `${op} — ${c.event_type} — ${v.venueName}`,
+          sub: [
+            c.event_year ?? 'undated',
+            `${c.mentions ?? 1} mention${(c.mentions ?? 1) === 1 ? '' : 's'}`,
+            c.source_title || null,
+          ].filter(Boolean).join(' · '),
+        },
+      });
+    }
+  }
+  scored.sort((a, b) => a.s - b.s || b.year - a.year);
+  return scored.slice(0, limit).map((x) => x.hit);
 }
 
 /** What to show under a hit so two venues with the same name are distinguishable.

@@ -8,7 +8,10 @@ import { S, font, mono, fmtUsd, fmtPct, jsonFetch, OUTCOME_BADGE } from '../uplo
 const token = new URLSearchParams(location.search).get('k') || '';
 const api = (path: string) => `${path}${path.includes('?') ? '&' : '?'}k=${encodeURIComponent(token)}`;
 
-type Pasted = { title: string; publication: string; date: string; text: string };
+type Pasted = {
+  title: string; publication: string; date: string;
+  author: string; url: string; text: string;
+};
 
 const EVENT_TYPES = ['won', 'lost', 'renewed', 'expired', 'self_op', 'strike', 'violation', 'initiative'];
 
@@ -47,8 +50,9 @@ function TableMapper({ batchId, file, inspect, onMapped }: {
 }) {
   const [m, setM] = useState<Record<string, string>>({
     venue_col: '', operator_col: '', date_col: '', event_type_col: '', state_col: '',
+    author_col: '', url_col: '',
     default_event_type: '', source_citation: '', source_date: new Date().toISOString().slice(0, 10),
-    dataset_title: '',
+    dataset_title: '', source_url: '',
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -104,6 +108,8 @@ function TableMapper({ batchId, file, inspect, onMapped }: {
         <div><span style={label}>Date / year column</span>{colSelect('date_col')}</div>
         <div><span style={label}>State column</span>{colSelect('state_col')}</div>
         <div><span style={label}>Event-type column</span>{colSelect('event_type_col')}</div>
+        <div><span style={label}>Author column (optional)</span>{colSelect('author_col')}</div>
+        <div><span style={label}>URL column (optional)</span>{colSelect('url_col')}</div>
         <div>
           <span style={label}>…or one event type for every row</span>
           <select style={{ ...input, width: 'auto' }} value={m.default_event_type}
@@ -130,6 +136,11 @@ function TableMapper({ batchId, file, inspect, onMapped }: {
           <span style={label}>Dataset title (optional)</span>
           <input style={{ ...input, width: 220 }} value={m.dataset_title}
             onChange={(e) => setM({ ...m, dataset_title: e.target.value })} />
+        </div>
+        <div style={{ flex: '1 1 280px' }}>
+          <span style={label}>Dataset URL (optional — used when no URL column is mapped)</span>
+          <input style={input} placeholder="https://…"
+            value={m.source_url} onChange={(e) => setM({ ...m, source_url: e.target.value })} />
         </div>
       </div>
 
@@ -184,7 +195,8 @@ function TableMapper({ batchId, file, inspect, onMapped }: {
 function App() {
   const [files, setFiles] = useState<File[]>([]);
   const [pasted, setPasted] = useState<Pasted[]>([]);
-  const [paste, setPaste] = useState<Pasted>({ title: '', publication: '', date: '', text: '' });
+  const emptyPaste: Pasted = { title: '', publication: '', date: '', author: '', url: '', text: '' };
+  const [paste, setPaste] = useState<Pasted>(emptyPaste);
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -205,7 +217,7 @@ function App() {
   function addPaste() {
     if (!paste.text.trim()) return;
     setPasted((cur) => [...cur, paste]);
-    setPaste({ title: '', publication: '', date: '', text: '' });
+    setPaste(emptyPaste);
   }
 
   async function submit() {
@@ -239,8 +251,11 @@ function App() {
       padding: '32px 16px',
     }}>
       <div style={{ maxWidth: 860, margin: '0 auto' }}>
-        <div style={{ fontSize: 20, fontWeight: 800, color: S.heading }}>
-          SNZ Map — add research
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
+          <div style={{ fontSize: 20, fontWeight: 800, color: S.heading }}>
+            SNZ Map — add research
+          </div>
+          <a href="/console" style={{ fontSize: 13, color: S.accent }}>← back to map</a>
         </div>
         <div style={{ fontSize: 13, color: S.muted, margin: '6px 0 20px', lineHeight: 1.5 }}>
           Drop article exports (<code style={{ fontFamily: mono }}>.txt .html .rtf .pdf .docx</code>),
@@ -306,6 +321,15 @@ function App() {
                   onChange={(e) => setPaste({ ...paste, publication: e.target.value })} />
                 <input style={{ ...input, flex: '0 1 150px' }} placeholder="Date (e.g. June 4, 2013)"
                   value={paste.date} onChange={(e) => setPaste({ ...paste, date: e.target.value })} />
+              </div>
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
+                <input style={{ ...input, flex: '1 1 200px' }}
+                  placeholder="Author (optional, e.g. Reilly, M.)"
+                  value={paste.author}
+                  onChange={(e) => setPaste({ ...paste, author: e.target.value })} />
+                <input style={{ ...input, flex: '2 1 280px' }}
+                  placeholder="URL (optional — where this article lives)"
+                  value={paste.url} onChange={(e) => setPaste({ ...paste, url: e.target.value })} />
               </div>
               <textarea style={{ ...input, minHeight: 120, fontFamily: font }}
                 placeholder="Paste the article text here"

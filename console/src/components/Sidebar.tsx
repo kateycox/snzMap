@@ -168,7 +168,15 @@ export function Sidebar({
         <p style={subtitleStyle}>Institutional food service, by place and time</p>
       </header>
 
-      <VenueSearch spine={spine} year={year} onPick={onPickVenue} />
+      <VenueSearch
+        spine={spine}
+        year={year}
+        onPick={onPickVenue}
+        operatorRows={operatorRows}
+        evidence={evidence}
+        onPickOperator={onPickOperator}
+        onPickEvidence={onPickEvidence}
+      />
 
       <Section title="Venue spine" summary={`${visibleVenues.toLocaleString()} in ${year}`}>
         {loading && <p style={mutedStyle}>Loading venues…</p>}
@@ -652,6 +660,12 @@ export function Sidebar({
           ))}
         </ul>
       </details>
+
+      {/* Discreet on purpose: the map is the public page, the queue is the workbench.
+          Safe on a public page — the password gate is on the other side of the link. */}
+      <div style={reviewLinkWrapStyle}>
+        <a href="/review" style={reviewLinkStyle}>Review queue →</a>
+      </div>
     </aside>
   );
 }
@@ -789,4 +803,16 @@ const notBuiltSummaryStyle: React.CSSProperties = {
   fontSize: 11,
   color: MUTED,
   listStyle: 'revert',
+};
+
+const reviewLinkWrapStyle: React.CSSProperties = {
+  marginTop: 12,
+  paddingTop: 10,
+  borderTop: `1px solid ${BORDER}`,
+};
+
+const reviewLinkStyle: React.CSSProperties = {
+  fontSize: 11,
+  color: MUTED,
+  textDecoration: 'none',
 };

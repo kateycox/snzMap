@@ -72,6 +72,9 @@ def cmd_create(args: argparse.Namespace) -> None:
             "title": (p.get("title") or "").strip(),
             "publication": (p.get("publication") or "").strip(),
             "date": (p.get("date") or "").strip(),
+            # Optional citation fields, recorded exactly as typed — never derived.
+            "author": (p.get("author") or "").strip(),
+            "url": (p.get("url") or "").strip(),
             "chars": len(text),
         })
     batch = store.create_batch(note=(req.get("note") or "").strip(), pasted=pasted)
@@ -123,6 +126,9 @@ def _pasted_records(batch: dict[str, Any], label: str) -> list[dict[str, Any]]:
             "source_date": date,
             "source_date_raw": meta.get("date") or None,
             "source_title": meta.get("title") or None,
+            # Typed citation fields, authoritative over anything a scan could find.
+            "source_author": meta.get("author") or None,
+            "source_url": meta.get("url") or None,
             "body_text": text,
             "problems": problems,
         })
@@ -175,6 +181,15 @@ def cmd_ingest(args: argparse.Namespace) -> None:
         unreadable = [{"source_file": r["source_file"], "error": r["error"]}
                       for r in results if r["error"]]
         articles += _pasted_records(batch, label)
+
+        # Citation capture: what the export itself prints (Author / Database / URL lines),
+        # read deterministically — typed fields on pasted articles are never overwritten.
+        # Every record gets the access date; it is the one field this run actually knows.
+        from ..cite import attach_citations
+        attach_citations(articles, PIPE)
+        accessed = dt.datetime.now(dt.timezone.utc).date().isoformat()
+        for a in articles:
+            a.setdefault("source_accessed", accessed)
 
         usable = sum(1 for a in articles
                      if a.get("body_text") and all(a.get(f) for f in REQUIRED_PROVENANCE))
@@ -306,6 +321,18 @@ def cmd_extract(args: argparse.Namespace) -> None:
                             session=PoliteSession("extract", min_interval_s=0.25),
                             model=MODEL, progress_every=1)
 
+            # Citation fields ride in extras.citation — the sanctioned open field, so the
+            # event schema and the (cached, paid) extraction payloads stay byte-identical.
+            from ..cite import citation_from_article
+            for ev in r["events"]:
+                art = next((a for a in articles
+                            if a["source_file"] == ev["source_file"]
+                            and (a.get("source_title") == ev.get("source_title")
+                                 or len(articles) == 1)), None)
+                cit = citation_from_article(art) if art else {}
+                if cit:
+                    ev["extras"] = {**(ev.get("extras") or {}), "citation": cit}
+
             bdir = batch_dir(batch["id"])
             (bdir / "events_articles.json").write_text(json.dumps(r["events"], indent=2))
             (bdir / "rejected.json").write_text(json.dumps(r["rejected"], indent=2))
@@ -395,6 +422,120 @@ def cmd_list(args: argparse.Namespace) -> None:
                       "excluded": len(b.get("excluded_by_reviewer") or []),
                       "files": len(b.get("files") or []), "pasted": len(b.get("pasted") or [])})
     _out(out)
+
+
+def cmd_browse(args: argparse.Namespace) -> None:
+    """Everything the store holds, read-only, for the /review data browser.
+
+    Published events come from `output/contract_events.json` — the exact file the last
+    publish built the map from, not a recomputation that could quietly disagree with it.
+    Each row is labelled with where it came from: `baseline` (the committed pre-web
+    corpus), the batch id that published it, or `untracked` if it is in neither — a state
+    that should not exist and is therefore said out loud rather than papered over.
+    """
+    canonical_path = OUT / "contract_events.json"
+    if not canonical_path.exists():
+        raise SystemExit(f"no canonical event file at {canonical_path} — publish has "
+                         "never run here")
+    canonical = json.loads(canonical_path.read_text())
+    baseline_ids = {e["event_id"] for e in load_baseline()}
+
+    batches = list_batches()
+    # event_id -> publishing batch, for provenance. Approved batches only: an event in a
+    # discarded or unapproved batch is not on the map and must not be labelled as if it were.
+    batch_of: dict[str, str] = {}
+    for b in batches:
+        if b.get("approved_content") and b.get("state") != "discarded":
+            for e in kept_events(b):
+                batch_of.setdefault(e["event_id"], b["id"])
+
+    events = []
+    for e in canonical:
+        eid = e.get("event_id")
+        extras = e.get("extras") or {}
+        events.append({
+            "event_id": eid,
+            "origin": "baseline" if eid in baseline_ids else batch_of.get(eid, "untracked"),
+            "operator": e.get("operator"),
+            "operator_normalized": e.get("operator_normalized"),
+            "sub_brand": e.get("sub_brand"),
+            "venue_id": e.get("venue_id"),
+            "venue_name_as_written": e.get("venue_name_as_written"),
+            "institution": e.get("institution"),
+            "event_type": e.get("event_type"),
+            "event_date": e.get("event_date"),
+            "date_precision": e.get("date_precision"),
+            "contract_value_usd": e.get("contract_value_usd"),
+            "extraction_confidence": e.get("extraction_confidence"),
+            "needs_review": e.get("needs_review"),
+            "notes": e.get("notes"),
+            "source_publication": e.get("source_publication"),
+            "source_date": e.get("source_date"),
+            "source_title": e.get("source_title"),
+            "source_file": e.get("source_file"),
+            "citation": extras.get("citation") or None,
+        })
+
+    # Exclusions and rejected rows, joined back to their display fields per batch.
+    exclusions, rejected = [], []
+    for b in batches:
+        if b.get("state") == "corrupt":
+            continue
+        rows = {e["event_id"]: e for e in store.load_events(b["id"], "events_articles.json")}
+        rows |= {e["event_id"]: e for e in store.load_events(b["id"], "events_tabular.json")}
+        for x in b.get("excluded_by_reviewer") or []:
+            e = rows.get(x["event_id"], {})
+            exclusions.append({
+                "batch": b["id"], "event_id": x["event_id"], "reason": x.get("reason"),
+                "at": x.get("at"), "operator": e.get("operator"),
+                "venue_name_as_written": e.get("venue_name_as_written"),
+                "event_type": e.get("event_type"), "event_date": e.get("event_date"),
+                "source_title": e.get("source_title"),
+            })
+        for r in store.load_events(b["id"], "rejected.json"):
+            rejected.append({
+                "batch": b["id"], "kind": "extraction",
+                "problems": r.get("problems") or [],
+                "detail": (r.get("event") or {}),
+            })
+        bdir = batch_dir(b["id"])
+        for name in (b.get("tables") or {}):
+            saved = bdir / f"tabular_{name}.json"
+            if not saved.exists():
+                continue
+            d = json.loads(saved.read_text())
+            for r in d.get("results", []):
+                if r.get("outcome") == "rejected":
+                    rejected.append({
+                        "batch": b["id"], "kind": "csv", "file": name,
+                        "row": r.get("row"), "venue": r.get("venue"),
+                        "operator": r.get("operator"),
+                        "problems": [r.get("reason") or "failed schema validation"],
+                    })
+
+    batch_rows = []
+    for b in batches:
+        batch_rows.append({k: b.get(k) for k in
+                           ("id", "created_at", "note", "state", "parse", "quote",
+                            "extract", "approved_content", "published_at", "error")}
+                          | {"excluded": len(b.get("excluded_by_reviewer") or []),
+                             "tables": {n: (t or {}).get("summary")
+                                        for n, t in (b.get("tables") or {}).items()}})
+
+    _out({
+        "events": events,
+        "counts": {
+            "events": len(events),
+            "baseline": sum(1 for e in events if e["origin"] == "baseline"),
+            "from_batches": sum(1 for e in events
+                                if e["origin"] not in ("baseline", "untracked")),
+            "untracked": sum(1 for e in events if e["origin"] == "untracked"),
+            "mapped": sum(1 for e in events if e["venue_id"]),
+        },
+        "batches": batch_rows,
+        "exclusions": exclusions,
+        "rejected": rejected,
+    })
 
 
 def cmd_discard(args: argparse.Namespace) -> None:
@@ -512,6 +653,8 @@ def main() -> None:
     p.set_defaults(fn=cmd_detail)
 
     sub.add_parser("list").set_defaults(fn=cmd_list)
+
+    sub.add_parser("browse").set_defaults(fn=cmd_browse)
 
     p = sub.add_parser("discard")
     p.add_argument("--batch", required=True)

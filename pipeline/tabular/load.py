@@ -141,8 +141,13 @@ def map_rows(path: Path, mapping: dict[str, Any], *, batch_id: str,
 
     `mapping` (column values are header names, or absent):
       venue_col (required), operator_col (required), date_col, event_type_col, state_col,
+      author_col, url_col,
       default_event_type, source_citation (required), source_date (required, YYYY-MM-DD),
-      dataset_title
+      dataset_title, source_url
+
+    Citation capture: `author_col` / `url_col` cells are recorded exactly as typed into
+    `extras.citation`; `source_url` is the dataset-level fallback when no per-row URL
+    column exists. The access date is stamped automatically. Absent stays absent.
     """
     headers, rows = read_table(path)
     col = {h: i for i, h in enumerate(headers)}
@@ -157,6 +162,9 @@ def map_rows(path: Path, mapping: dict[str, Any], *, batch_id: str,
 
     venue_i, operator_i = idx("venue_col"), idx("operator_col")
     date_i, type_i, state_i = idx("date_col"), idx("event_type_col"), idx("state_col")
+    author_i, url_i = idx("author_col"), idx("url_col")
+    dataset_url = (mapping.get("source_url") or "").strip()
+    accessed = dt.datetime.now(dt.timezone.utc).date().isoformat()
     if venue_i is None or operator_i is None:
         raise SystemExit("mapping needs venue_col and operator_col")
 
@@ -292,6 +300,17 @@ def map_rows(path: Path, mapping: dict[str, Any], *, batch_id: str,
             "notes": f"csv row {n}; joined by name+{'+'.join(gates)}",
             "extras": {"batch": batch_id, "row": n, "join_gates": gates},
         }
+        # Citation: the row's own cells, exactly as typed, else the dataset-level URL.
+        # Found keys only — a blank cell writes nothing, and nothing is derived.
+        cit: dict[str, str] = {}
+        row_author = _cell(row, author_i).strip() if author_i is not None else ""
+        row_url = _cell(row, url_i).strip() if url_i is not None else ""
+        if row_author:
+            cit["author"] = row_author
+        if row_url or dataset_url:
+            cit["url"] = row_url or dataset_url
+        cit["accessed"] = accessed
+        ev["extras"]["citation"] = cit
         ev["event_id"] = mint_event_id(
             {"source_file": rel_file, "source_offset": n}, ev)
         problems = validate_event(ev)
