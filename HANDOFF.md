@@ -35,10 +35,10 @@ bun install          # first time only
 bun run dev
 ```
 
-Open **http://localhost:5892**. The root path goes straight in; `/console` asks for a login,
-and in production every path does. It is `snz` / `netzero` — a deterrent on an internal tool,
-not security. Set in `console/server.ts`, overridable with `CONSOLE_USER` /
-`CONSOLE_PASSWORD`.
+Open **http://localhost:5892**. The map (`/` and `/console`) is public — Katey ships the URL
+to prospects. The working pages, `/add` and `/review`, sit behind one shared passphrase
+(`SHARED_PASSPHRASE` in `console/.env`), entered once per device and remembered by a
+year-long signed cookie. See §6 for the access model.
 
 You will see a grey map of the United States covered in dots. Every dot is a venue in the
 spine. **Grey means "we have no operator on record for this venue in this year"** — which the
@@ -154,26 +154,45 @@ names and more chances to match the wrong one. Re-run the audit after any spine 
 
 Full detail is in **[ADDING_DATA.md](ADDING_DATA.md)**. The short version:
 
-### The hosted front door (added 2026-09-19)
+### The hosted front door (added 2026-09-19; access simplified the same day)
 
 There is now a web path onto the map, running inside the hosted console at
-`snzmap-kikib.zocomputer.io`. Two pages, two gates, both Katey's:
+`snzmap-kikib.zocomputer.io`. Two pages, one door:
 
-- **`/add?k=<token>`** — a secret link for dropping research: article exports, spreadsheets,
-  or pasted text with typed provenance. Everything on it is free — files are parsed and
-  priced at the measured per-article rate, then the batch waits. The upload path holds no
-  API key; it is structurally unable to spend money.
-- **`/review`** — admin password. Gate 1 approves the quoted spend (extraction runs in the
-  background); Gate 2 shows every extracted/mapped row, lets Katey exclude rows *with a
-  reason, kept never deleted*, and publishes.
+- **Access (ACCESS_OCR_SPEC.md, supersedes the tokened link + admin password):** `/console`
+  carries a clear **"＋ Add data"** button → plain `/add`. Both `/add` and `/review` share
+  **one passphrase** (`SHARED_PASSPHRASE` in `console/.env`), entered once per device —
+  a ~1-year httpOnly cookie, a random nonce HMAC-signed with the passphrase, remembers it.
+  Rotating the passphrase in `.env` logs every device out at once. Old bookmarked
+  `/add?k=…` links 302 to `/add`. No page or bundle carries the passphrase (grep the dist;
+  that is the acceptance test). Katey says the passphrase out loud to Yash; both gates
+  below are deliberate button clicks with the cost shown, not a second login.
+- **`/add`** — dropping research: article exports, spreadsheets, scans (`.png .jpg .jpeg
+  .tif .tiff .webp`, and PDFs with no text layer), or pasted text with typed provenance.
+  Everything on it is free — files are parsed (scans OCR'd locally, see below) and priced
+  at the measured per-article rate, then the batch waits. The upload path holds no API
+  key; it is structurally unable to spend money.
+- **`/review`** — Gate 1 approves the quoted spend (extraction runs in the background);
+  Gate 2 shows every extracted/mapped row, lets Katey exclude rows *with a reason, kept
+  never deleted*, and publishes.
 
-Added later the same day (2026-09-19), the console UX build on top of those two pages:
+**Scans are never turned away (2026-09-19).** Every upload is stored and hashed first.
+Image files and textless PDFs then go through free local OCR (tesseract; `pdftoppm` at
+300 dpi for PDFs). The usable rule is deterministic and written down in
+`pipeline/ingest/ocr.py`: mean word confidence ≥ 55 and ≥ 40 words. Usable text joins the
+normal parse → quote → extraction path marked `text_source: "ocr"` with measured
+confidence kept (under 75 is flagged, not hidden). An unreadable scan stays visible in
+the batch as *"stored — OCR could not read this scan"* with its measured numbers, plus an
+optional **"Transcribe with AI"** button priced per page — that runs only through the
+normal Gate-1 spend approval, uses the existing key, and stores `text_source: "vision"`
+(`pipeline/extract/transcribe.py`; responses cached under `raw/transcribe/`). The laptop
+path (`pipeline.add`) still refuses scans loudly — it has no OCR step, and a copied-but-
+unparsed image would be a silent skip.
 
-- **The three surfaces link to each other.** The map sidebar's footer carries a discreet
-  "Review queue →"; `/add` links back to the map; `/review` shows Yash's tokened upload
-  link with a copy button — after the password only. The token is returned by an
-  admin-gated API and appears in no public page or built bundle (grep the dist to check;
-  that is the acceptance test).
+Also from 2026-09-19, the console UX build on top of those two pages:
+
+- **The three surfaces link to each other.** The map sidebar carries the "＋ Add data"
+  button and a discreet "Review queue →"; `/add` links back to the map.
 - **`/review` has a Data tab** — the backend store, read-only: every published event
   with its origin labelled (`baseline`, or the batch id that published it), batch
   history with what was actually billed, Gate-2 exclusions with their reasons, and
@@ -215,8 +234,8 @@ regeneration is the path that would have wiped the 178 events.
 - Folding published batches into the committed baseline is a deliberate maintenance step
   (copy the server's `output/contract_events.json` over the baseline file, commit both it
   and the rebuilt outputs), not something the publish button does.
-- Secrets live in `console/.env` (gitignored): the upload token, the admin password, and
-  the extraction API key. The generic spreadsheet loader is `pipeline/tabular/`; the web
+- Secrets live in `console/.env` (gitignored): the shared passphrase and the extraction
+  API key. The generic spreadsheet loader is `pipeline/tabular/`; the web
   queue CLI is `pipeline/webqueue/` — Bun orchestrates, Python decides.
 - CSV rows join the spine only through two gates (name **and** state-or-dated-year);
   every exclusion is tagged and browsable. Same rule as everywhere else in this repo: a
@@ -262,10 +281,12 @@ paying twice.
 
 ### Three things that will bite you
 
-- **Scanned PDFs do not work.** A PDF that is page images with no text layer is refused rather
-  than silently returning nothing. 236 of the 602 articles in the current corpus are exactly
-  this. Getting them in needs OCR — that is **build D** in [NEXT_STEPS.md](NEXT_STEPS.md),
-  and the cheaper first move is to try re-exporting them from ProQuest *with* full text.
+- **Scanned PDFs do not work on this laptop path.** A PDF that is page images with no text
+  layer is refused rather than silently returning nothing. 236 of the 602 articles in the
+  current corpus are exactly this. The **web `/add` path OCRs scans** (since 2026-09-19);
+  for the 236 already in the corpus that is still **build D** in
+  [NEXT_STEPS.md](NEXT_STEPS.md), and the cheaper first move is to try re-exporting them
+  from ProQuest *with* full text.
 - **Check `body share` after parsing.** It is printed at the end of the parse. It should be
   around 79%. The first real export came in at **2.7%** and everything downstream still looked
   fine — 4 files, 4 articles, a median body of 28 characters. The pipeline was "working" and

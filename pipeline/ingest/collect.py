@@ -28,6 +28,13 @@ OUT = ROOT / "output"
 # silently ignored — a .doc full of articles that nobody noticed is a hole in the corpus.
 ARTICLE_SUFFIXES = {".txt", ".text", ".htm", ".html", ".rtf", ".pdf", ".docx"}
 
+# Scan formats the web queue also collects (stored + hashed first, then OCR — see
+# ingest/ocr.py). The laptop path deliberately does NOT pass these: pipeline.add has no
+# OCR step, so a copied-but-unparsed image would be a silent skip. There they stay in
+# the manifest's skipped list, which is the honest outcome for a path that cannot read
+# them.
+IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".tif", ".tiff", ".webp"}
+
 # Volume noise. These are not articles and clutter the skipped list.
 IGNORE_NAMES = {".DS_Store", "Thumbs.db", "desktop.ini", ".Spotlight-V100", ".Trashes"}
 
@@ -40,11 +47,16 @@ def sha256(path: Path) -> str:
     return h.hexdigest()
 
 
-def collect(source: Path, label: str, dry_run: bool = False) -> dict:
-    """Walk `source`, copy article files under `articles/raw/<label>/`."""
+def collect(source: Path, label: str, dry_run: bool = False,
+            extra_suffixes: set[str] | None = None) -> dict:
+    """Walk `source`, copy article files under `articles/raw/<label>/`.
+
+    `extra_suffixes` lets the web queue also collect scan images (IMAGE_SUFFIXES) —
+    stored and hashed exactly like articles, read later by OCR."""
     if not source.exists():
         raise SystemExit(f"source not found: {source}")
 
+    wanted = ARTICLE_SUFFIXES | (extra_suffixes or set())
     dest_root = RAW / label
     copied, skipped, duplicates = [], [], []
     seen: dict[str, str] = {}
@@ -53,7 +65,7 @@ def collect(source: Path, label: str, dry_run: bool = False) -> dict:
         if path.name in IGNORE_NAMES or path.name.startswith("._"):
             continue
         rel = path.relative_to(source)
-        if path.suffix.lower() not in ARTICLE_SUFFIXES:
+        if path.suffix.lower() not in wanted:
             skipped.append({"path": str(rel), "reason": f"unhandled suffix {path.suffix!r}"})
             continue
 

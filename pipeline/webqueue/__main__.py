@@ -32,7 +32,7 @@ from pathlib import Path
 from typing import Any
 
 from . import store
-from .store import (ARTICLE_SUFFIXES, TABLE_SUFFIXES, RunLock, batch_dir,
+from .store import (ARTICLE_SUFFIXES, IMAGE_SUFFIXES, TABLE_SUFFIXES, RunLock, batch_dir,
                     kept_events, list_batches, load_baseline, load_batch, save_batch)
 
 PIPE = Path(__file__).resolve().parent.parent           # pipeline/
@@ -91,6 +91,82 @@ def cmd_create(args: argparse.Namespace) -> None:
 
 # ── ingest: every free stage, then the quote ───────────────────────────────────
 
+def _quote_for(articles: list[dict[str, Any]]) -> dict[str, Any]:
+    """The extraction quote, priced with add.py's own logic against the measured rate.
+    Free: the session is constructed for cache-path resolution and makes no request."""
+    from ..add import measured_rate, uncached
+    from ..extract.prompt import MODEL
+
+    withtext = [a for a in articles if a.get("body_text")]
+    todo = uncached(withtext, MODEL) if withtext else []
+    rate = measured_rate()
+    return {
+        "articles": len(articles),
+        "no_body": len(articles) - len(withtext),
+        "already_cached": len(withtext) - len(todo),
+        "billable": len(todo),
+        "rate_per_article": round(rate[0], 4) if rate else None,
+        "rate_basis_articles": rate[1] if rate else None,
+        "estimate_usd": round(rate[0] * len(todo), 2) if rate else None,
+    }
+
+
+# The one signal `formats.from_pdf` raises for a scanned PDF. Matched on substring so a
+# wording tweak there fails loudly here (the test asserts the routing).
+_NEEDS_OCR = "no extractable text layer"
+
+
+def _ocr_scan(batch: dict[str, Any], path: Path, rel: str,
+              articles: list[dict[str, Any]], files: list[dict[str, Any]]) -> None:
+    """One scan through free local OCR. Never turns the file away: every outcome — read,
+    unreadable, even a tooling crash — lands in batch['scans'] and the files list, with
+    the measured numbers rather than a bare pass/fail. Usable text joins `articles` and
+    the normal quote → extraction path, marked text_source: "ocr"."""
+    from ..extract.transcribe import quote_pages
+    from ..ingest.ocr import run_ocr
+    from ..ingest.parse import parse_text
+
+    name = path.name
+    scan: dict[str, Any] = {"state": "needs_ocr", "source_file": rel}
+    batch["scans"][name] = scan
+    try:
+        o = run_ocr(path)
+    except Exception as exc:  # noqa: BLE001 — tooling failure is a result, not a crash
+        scan.update({"state": "unreadable", "mean_conf": 0.0, "words": 0, "pages": 0,
+                     "error": f"{type(exc).__name__}: {exc}", "vision_quote": None})
+        files.append({"name": name, "kind": "scan_unreadable",
+                      "note": f"stored — OCR failed on this scan ({type(exc).__name__})"})
+        return
+
+    (batch_dir(batch["id"]) / "ocr").mkdir(exist_ok=True)
+    (batch_dir(batch["id"]) / "ocr" / f"{name}.txt").write_text(o["text"])
+    scan.update({"mean_conf": o["mean_conf"], "words": o["words"],
+                 "pages": o["page_count"],
+                 "vision_quote": quote_pages([p["px"] for p in o["pages"]])})
+
+    if o["usable"]:
+        scan["state"] = "ocr"
+        scan["low_confidence"] = o["low_confidence"]
+        arts, _dropped = parse_text(o["text"], rel)
+        for a in arts:
+            a["text_source"] = "ocr"
+            a["ocr"] = {"mean_conf": o["mean_conf"], "words": o["words"],
+                        "pages": o["page_count"], "per_page": o["pages"]}
+            if o["low_confidence"]:
+                a["problems"].append(
+                    f"low OCR confidence (mean word confidence {o['mean_conf']}) — "
+                    "check extracted rows against the image")
+        scan["articles"] = len(arts)
+        articles += arts
+        note = (f"read by local OCR — mean word confidence {o['mean_conf']}, "
+                f"{o['words']} words, {o['page_count']} page(s)")
+        files.append({"name": name, "kind": "scan", "note": note})
+    else:
+        scan["state"] = "unreadable"
+        files.append({"name": name, "kind": "scan_unreadable",
+                      "note": f"stored — OCR could not read this scan (mean word "
+                              f"confidence {o['mean_conf']}, {o['words']} words)"})
+
 def _pasted_records(batch: dict[str, Any], label: str) -> list[dict[str, Any]]:
     """Pasted text becomes an article record with **typed** provenance, never guessed.
 
@@ -136,8 +212,6 @@ def _pasted_records(batch: dict[str, Any], label: str) -> list[dict[str, Any]]:
 
 
 def cmd_ingest(args: argparse.Namespace) -> None:
-    from ..add import measured_rate, uncached
-    from ..extract.prompt import MODEL
     from ..ingest.collect import collect
     from ..ingest.parse import coverage, parse_file
     from ..tabular.load import inspect
@@ -153,9 +227,12 @@ def cmd_ingest(args: argparse.Namespace) -> None:
         files: list[dict[str, Any]] = []
         manifest = {"copied": [], "duplicates": [], "skipped": []}
         if staged.exists() and any(staged.iterdir()):
-            manifest = collect(staged, label)
+            # Scans are collected too — stored + hashed first, whatever OCR later says.
+            manifest = collect(staged, label, extra_suffixes=IMAGE_SUFFIXES)
 
         for item in manifest["copied"]:
+            if item["suffix"] in IMAGE_SUFFIXES:
+                continue  # scans get their own files entry from _ocr_scan, with numbers
             files.append({"name": item["source_file"].split("/")[-1], "kind": "article",
                           "bytes": item["bytes"]})
         for item in manifest["duplicates"]:
@@ -178,9 +255,30 @@ def cmd_ingest(args: argparse.Namespace) -> None:
                         and "pasted" not in p.relative_to(label_dir).parts):
                     results.append(parse_file(p, str(p.relative_to(PIPE))))
         articles = [a for r in results for a in r["articles"]]
+
+        # Scans: image files, plus any PDF whose text layer turned out to be empty. The
+        # PDF's "unreadable" verdict is re-routed, not reported — refusal at the door is
+        # exactly what ACCESS_OCR_SPEC.md removes from this path.
+        batch["scans"] = {}
+        scan_pdfs = {r["source_file"] for r in results
+                     if r["error"] and _NEEDS_OCR in r["error"]}
         unreadable = [{"source_file": r["source_file"], "error": r["error"]}
-                      for r in results if r["error"]]
+                      for r in results if r["error"] and r["source_file"] not in scan_pdfs]
+        if label_dir.exists():
+            for p in sorted(label_dir.rglob("*")):
+                if not p.is_file() or "pasted" in p.relative_to(label_dir).parts:
+                    continue
+                rel = str(p.relative_to(PIPE))
+                if p.suffix.lower() in IMAGE_SUFFIXES or rel in scan_pdfs:
+                    if rel in scan_pdfs:
+                        # It was listed as an article when collected; it is a scan.
+                        files[:] = [f for f in files
+                                    if not (f.get("kind") == "article" and f["name"] == p.name)]
+                    _ocr_scan(batch, p, rel, articles, files)
+
         articles += _pasted_records(batch, label)
+        for a in articles:
+            a.setdefault("text_source", "native")
 
         # Citation capture: what the export itself prints (Author / Database / URL lines),
         # read deterministically — typed fields on pasted articles are never overwritten.
@@ -193,7 +291,10 @@ def cmd_ingest(args: argparse.Namespace) -> None:
 
         usable = sum(1 for a in articles
                      if a.get("body_text") and all(a.get(f) for f in REQUIRED_PROVENANCE))
-        cov = coverage(results) if results else {"text_retained": 1.0, "body_share": 1.0}
+        # Coverage measures export parsing; scan-routed files contribute no export text
+        # and would drag it to a meaningless 0% on a scans-only batch.
+        cov_results = [r for r in results if r["source_file"] not in scan_pdfs]
+        cov = coverage(cov_results) if cov_results else {"text_retained": 1.0, "body_share": 1.0}
 
         (batch_dir(batch["id"]) / "articles.json").write_text(json.dumps(articles, indent=2))
 
@@ -206,20 +307,7 @@ def cmd_ingest(args: argparse.Namespace) -> None:
                 except SystemExit as exc:
                     batch["tables"][f.name] = {"error": str(exc)}
 
-        # The quote, priced with add.py's own logic against the measured rate. Free: the
-        # session is constructed for cache-path resolution and makes no request.
-        withtext = [a for a in articles if a.get("body_text")]
-        todo = uncached(withtext, MODEL) if withtext else []
-        rate = measured_rate()
-        quote = {
-            "articles": len(articles),
-            "no_body": len(articles) - len(withtext),
-            "already_cached": len(withtext) - len(todo),
-            "billable": len(todo),
-            "rate_per_article": round(rate[0], 4) if rate else None,
-            "rate_basis_articles": rate[1] if rate else None,
-            "estimate_usd": round(rate[0] * len(todo), 2) if rate else None,
-        }
+        quote = _quote_for(articles)
 
         batch.update({
             "files": files,
@@ -370,6 +458,90 @@ def cmd_extract(args: argparse.Namespace) -> None:
             _out(batch)
         except BaseException as exc:
             _fail_batch(batch, f"{type(exc).__name__}: {exc}")
+            raise
+
+
+# ── transcribe: the paid fallback for scans local OCR could not read ───────────
+
+def cmd_transcribe_start(args: argparse.Namespace) -> None:
+    """Free marker so the UI shows 'transcribing' the moment the button is pressed and a
+    double-click cannot start two paid runs of the same file."""
+    batch = load_batch(args.batch)
+    scan = (batch.get("scans") or {}).get(args.file)
+    if not scan:
+        raise SystemExit(f"no scan {args.file} in batch {batch['id']}")
+    if scan["state"] not in ("unreadable", "vision_failed"):
+        raise SystemExit(f"scan {args.file} is {scan['state']} — AI transcription applies "
+                         "to a scan local OCR could not read")
+    scan["state"] = "transcribing"
+    scan["error"] = None
+    save_batch(batch)
+    _out({"batch": batch["id"], "file": args.file, "state": "transcribing"})
+
+
+def cmd_transcribe(args: argparse.Namespace) -> None:
+    import os
+
+    from ..extract.transcribe import transcribe_scan
+    from ..ingest.parse import parse_text
+
+    if not (os.environ.get("ANTHROPIC_API_KEY") or "").strip():
+        raise SystemExit("ANTHROPIC_API_KEY is not set — transcription is a paid stage "
+                         "and cannot run without it")
+
+    batch = load_batch(args.batch)
+    scan = (batch.get("scans") or {}).get(args.file)
+    if not scan:
+        raise SystemExit(f"no scan {args.file} in batch {batch['id']}")
+    rel = scan["source_file"]
+    path = PIPE / rel
+
+    with RunLock():
+        try:
+            r = transcribe_scan(path, label=f"{batch['id']}-{args.file}")
+            bdir = batch_dir(batch["id"])
+            (bdir / "ocr").mkdir(exist_ok=True)
+            (bdir / "ocr" / f"{args.file}.vision.txt").write_text(r["text"])
+
+            if not r["text"].strip():
+                scan.update({"state": "vision_failed", "vision_usd": r["usd"],
+                             "error": "model returned no text"})
+                save_batch(batch)
+                _out(batch)
+                return
+
+            # The transcription joins the batch like any article, with its provenance
+            # named. Any earlier articles from this same scan are replaced, not stacked.
+            arts, _dropped = parse_text(r["text"], rel)
+            for a in arts:
+                a["text_source"] = "vision"
+                a["problems"].append("transcribed by AI vision from a scan — verify "
+                                     "against the image before trusting details")
+            art_path = bdir / "articles.json"
+            existing = json.loads(art_path.read_text()) if art_path.exists() else []
+            existing = [a for a in existing if a.get("source_file") != rel]
+            existing += arts
+            art_path.write_text(json.dumps(existing, indent=2))
+
+            scan.update({"state": "vision", "vision_usd": r["usd"],
+                         "articles": len(arts), "error": None})
+            if batch.get("parse"):
+                batch["parse"]["articles"] = len(existing)
+                batch["parse"]["usable"] = sum(
+                    1 for a in existing
+                    if a.get("body_text") and all(a.get(f) for f in REQUIRED_PROVENANCE))
+            batch["quote"] = _quote_for(existing)
+            # New billable text exists, so extraction goes back through Gate 1 — even a
+            # batch that was already extracted or published returns to the quote.
+            batch["state"] = "quoted"
+            save_batch(batch)
+            _out(batch)
+        except BaseException as exc:
+            fresh = load_batch(args.batch)
+            if args.file in (fresh.get("scans") or {}):
+                fresh["scans"][args.file].update(
+                    {"state": "vision_failed", "error": f"{type(exc).__name__}: {exc}"})
+                save_batch(fresh)
             raise
 
 
@@ -640,6 +812,16 @@ def main() -> None:
     p = sub.add_parser("extract")
     p.add_argument("--batch", required=True)
     p.set_defaults(fn=cmd_extract)
+
+    p = sub.add_parser("transcribe-start")
+    p.add_argument("--batch", required=True)
+    p.add_argument("--file", required=True)
+    p.set_defaults(fn=cmd_transcribe_start)
+
+    p = sub.add_parser("transcribe")
+    p.add_argument("--batch", required=True)
+    p.add_argument("--file", required=True)
+    p.set_defaults(fn=cmd_transcribe)
 
     p = sub.add_parser("exclude")
     p.add_argument("--batch", required=True)

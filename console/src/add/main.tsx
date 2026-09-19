@@ -1,12 +1,11 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { S, font, mono, fmtUsd, fmtPct, jsonFetch, OUTCOME_BADGE } from '../upload/shared';
+import { UnlockScreen, useUnlock } from '../upload/Unlock';
 
-/** Yash's page. Everything here is free: files are parsed and priced, never extracted.
- * The page cannot spend money — the server route it talks to never holds the API key. */
-
-const token = new URLSearchParams(location.search).get('k') || '';
-const api = (path: string) => `${path}${path.includes('?') ? '&' : '?'}k=${encodeURIComponent(token)}`;
+/** The upload page. Everything here is free: files are parsed, OCR'd if scanned, and
+ * priced — never extracted. The page cannot spend money — the server routes it talks to
+ * never hold the API key. One passphrase (shared with /review) unlocks it per device. */
 
 type Pasted = {
   title: string; publication: string; date: string;
@@ -75,7 +74,7 @@ function TableMapper({ batchId, file, inspect, onMapped }: {
     try {
       const mapping: Record<string, string> = {};
       for (const [k, v] of Object.entries(m)) if (v) mapping[k] = v;
-      const r = await jsonFetch(api(`/api/upload/${batchId}/map`), {
+      const r = await jsonFetch(`/api/upload/${batchId}/map`, {
         method: 'POST', body: JSON.stringify({ file, mapping }),
       });
       setResult(r);
@@ -227,7 +226,7 @@ function App() {
       for (const f of files) fd.append('files', f);
       if (pasted.length) fd.append('pasted', JSON.stringify(pasted));
       if (note) fd.append('note', note);
-      const r = await fetch(api('/api/upload'), { method: 'POST', body: fd });
+      const r = await fetch('/api/upload', { method: 'POST', body: fd });
       const data = await r.json();
       if (!r.ok) throw new Error(data?.error || `HTTP ${r.status}`);
       setBatch(data);
@@ -236,10 +235,6 @@ function App() {
     } finally {
       setBusy(false);
     }
-  }
-
-  if (!token) {
-    return <div style={{ fontFamily: font, color: S.text, padding: 40 }}>Not found.</div>;
   }
 
   const quote = batch?.quote;
@@ -259,10 +254,11 @@ function App() {
         </div>
         <div style={{ fontSize: 13, color: S.muted, margin: '6px 0 20px', lineHeight: 1.5 }}>
           Drop article exports (<code style={{ fontFamily: mono }}>.txt .html .rtf .pdf .docx</code>),
+          scans (<code style={{ fontFamily: mono }}>.png .jpg .tif .webp</code> or scanned PDFs),
           spreadsheets (<code style={{ fontFamily: mono }}>.csv .xlsx</code>), or paste article
-          text. Everything on this page is <b>free</b>: files are parsed and priced, and then the
-          batch waits for Katey to approve the paid extraction step. Nothing you do here spends
-          money or changes the live map.
+          text. Everything on this page is <b>free</b>: files are parsed — scans go through
+          local OCR — and priced, and then the batch waits for Katey to approve the paid
+          extraction step. Nothing you do here spends money or changes the live map.
         </div>
 
         {!batch && (
@@ -282,8 +278,8 @@ function App() {
                 Drop files here, or click to choose
               </div>
               <div style={{ fontSize: 12, color: S.muted, marginTop: 4 }}>
-                Scanned PDFs (page images with no text layer) can't be read — they'll be
-                listed as skipped, not silently ignored.
+                Scanned pages are welcome — they're stored and read by local OCR. A scan the
+                OCR can't read is kept and listed, never turned away.
               </div>
               <input ref={fileRef} type="file" multiple style={{ display: 'none' }}
                 onChange={(e) => { addFiles(e.target.files); e.target.value = ''; }} />
@@ -423,4 +419,11 @@ function App() {
   );
 }
 
-createRoot(document.getElementById('root')!).render(<App />);
+function Gate() {
+  const [unlocked, letIn] = useUnlock();
+  if (unlocked === null) return null;
+  if (!unlocked) return <UnlockScreen title="SNZ Map — add research" onIn={letIn} />;
+  return <App />;
+}
+
+createRoot(document.getElementById('root')!).render(<Gate />);

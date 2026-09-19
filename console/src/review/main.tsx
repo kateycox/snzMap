@@ -1,10 +1,13 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { S, font, mono, fmtUsd, fmtPct, jsonFetch, STATE_BADGE, OUTCOME_BADGE } from '../upload/shared';
+import { UnlockScreen, useUnlock } from '../upload/Unlock';
 import { DataTab } from './DataTab';
 
-/** Katey's page — both gates live here.
- * Gate 1 (spend): the exact quote, then Approve & extract.
+/** The review page — both gates live here, behind the same one-per-device passphrase
+ * as /add. The gates are deliberate button clicks with the cost shown, not a password.
+ * Gate 1 (spend): the exact quote, then Approve & extract — and, for scans local OCR
+ * could not read, a per-file "Transcribe with AI" priced per page.
  * Gate 2 (content): every extracted/mapped row, excludable with a reason (kept, never
  * deleted), then Publish — committed baseline + approved batches, never anything else. */
 
@@ -31,40 +34,6 @@ function StateBadge({ state }: { state: string }) {
       fontSize: 11, fontWeight: 700, color: b.color, border: `1.5px solid ${b.color}`,
       borderRadius: 999, padding: '2px 10px', whiteSpace: 'nowrap',
     }}>{b.label}</span>
-  );
-}
-
-function Login({ onIn }: { onIn: () => void }) {
-  const [pw, setPw] = useState('');
-  const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
-  async function go() {
-    setBusy(true); setError('');
-    try {
-      await jsonFetch('/api/admin/login', { method: 'POST', body: JSON.stringify({ password: pw }) });
-      onIn();
-    } catch (e: any) {
-      setError(String(e.message || e));
-    } finally {
-      setBusy(false);
-    }
-  }
-  return (
-    <div style={{ maxWidth: 360, margin: '18vh auto 0' }}>
-      <div style={{ fontSize: 20, fontWeight: 800, color: S.heading }}>SNZ Map — review queue</div>
-      <div style={{ fontSize: 13, color: S.muted, margin: '6px 0 16px' }}>
-        Admin password. Entered once per session.
-      </div>
-      <div style={{ display: 'flex', gap: 8 }}>
-        <input style={{ ...input, flex: 1 }} type="password" value={pw} autoFocus
-          onChange={(e) => setPw(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && go()} />
-        <button style={busy ? { ...button, opacity: 0.6 } : button} disabled={busy} onClick={go}>
-          Enter
-        </button>
-      </div>
-      {error && <div style={{ color: S.error, fontSize: 13, marginTop: 8 }}>{error}</div>}
-    </div>
   );
 }
 
@@ -145,54 +114,6 @@ function EventRow({ ev, snippet, excluded, onExclude, onUndo }: {
   );
 }
 
-/** Yash's tokened upload link, fetched only through the admin-gated API — the token is
- * never embedded in this page's bundle, which is served without a password. */
-function UploadLinkCard() {
-  const [url, setUrl] = useState('');
-  const [error, setError] = useState('');
-  const [copied, setCopied] = useState(false);
-  useEffect(() => {
-    jsonFetch('/api/admin/upload-link')
-      .then((r) => setUrl(r.url))
-      .catch((e) => setError(String(e.message || e)));
-  }, []);
-  if (error) return <div style={{ color: S.error, fontSize: 12, marginBottom: 14 }}>{error}</div>;
-  if (!url) return null;
-  return (
-    <div style={{
-      background: S.panel, border: `1px solid ${S.border}`, borderRadius: 8,
-      padding: '10px 14px', marginBottom: 16, display: 'flex', gap: 10,
-      alignItems: 'center', flexWrap: 'wrap',
-    }}>
-      <span style={{ fontSize: 12, fontWeight: 700, color: S.heading, whiteSpace: 'nowrap' }}>
-        Yash's upload link
-      </span>
-      <code style={{
-        fontFamily: mono, fontSize: 11.5, color: S.text, background: S.surface,
-        border: `1px solid ${S.border}`, borderRadius: 5, padding: '4px 8px',
-        overflowWrap: 'anywhere', flex: '1 1 320px',
-      }}>{url}</code>
-      <button style={{ ...ghost, padding: '4px 12px', fontSize: 12 }} onClick={async () => {
-        try {
-          await navigator.clipboard.writeText(url);
-        } catch {
-          const ta = document.createElement('textarea');
-          ta.value = url;
-          document.body.appendChild(ta);
-          ta.select();
-          document.execCommand('copy');
-          ta.remove();
-        }
-        setCopied(true);
-        setTimeout(() => setCopied(false), 1500);
-      }}>{copied ? 'Copied ✓' : 'Copy'}</button>
-      <span style={{ fontSize: 11, color: S.muted, flexBasis: '100%' }}>
-        The link is the whole credential — send it to Yash and nobody else.
-      </span>
-    </div>
-  );
-}
-
 function BatchDetail({ id, onBack, onChanged }: {
   id: string; onBack: () => void; onChanged: () => void;
 }) {
@@ -211,6 +132,9 @@ function BatchDetail({ id, onBack, onChanged }: {
       if (data.batch.state === 'extracting') {
         const l = await jsonFetch(`/api/admin/batches/${id}/log`);
         setLog(l.log || '');
+      } else if (Object.values(data.batch.scans || {}).some((s: any) => s.state === 'transcribing')) {
+        const l = await jsonFetch(`/api/admin/batches/${id}/log?kind=transcribe`);
+        setLog(l.log || '');
       }
     } catch (e: any) {
       setError(String(e.message || e));
@@ -220,8 +144,9 @@ function BatchDetail({ id, onBack, onChanged }: {
   useEffect(() => {
     refresh();
     timer.current = setInterval(async () => {
-      const state = (dRef.current as any)?.batch?.state;
-      if (state === 'extracting' || state === 'ingesting') await refresh();
+      const b = (dRef.current as any)?.batch;
+      const busyScan = Object.values(b?.scans || {}).some((s: any) => s.state === 'transcribing');
+      if (b?.state === 'extracting' || b?.state === 'ingesting' || busyScan) await refresh();
     }, 3000);
     return () => { if (timer.current) clearInterval(timer.current); };
   }, [refresh]);
@@ -259,6 +184,10 @@ function BatchDetail({ id, onBack, onChanged }: {
     act('exclude', () => jsonFetch(`/api/admin/batches/${id}/exclude`, {
       method: 'POST', body: JSON.stringify({ event_id, undo: true }),
     }));
+  const transcribe = (file: string) =>
+    act('transcribe', () => jsonFetch(`/api/admin/batches/${id}/transcribe`, {
+      method: 'POST', body: JSON.stringify({ file }),
+    }));
 
   return (
     <div>
@@ -288,6 +217,55 @@ function BatchDetail({ id, onBack, onChanged }: {
                 </span>
               ))}
             </div>
+          )}
+        </div>
+      )}
+
+      {/* Scans — every one stored and named, readable or not. Nothing bounced. */}
+      {Object.keys(b.scans || {}).length > 0 && (
+        <div style={{ ...box, marginBottom: 12 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: S.heading, marginBottom: 4 }}>
+            Scans ({Object.keys(b.scans).length})
+          </div>
+          <div style={{ fontSize: 12, color: S.muted, marginBottom: 6 }}>
+            Read by free local OCR where possible. The measured confidence is shown, not a
+            bare pass/fail; a scan OCR can't read stays here with a priced AI option.
+          </div>
+          {Object.entries(b.scans).map(([name, s]: any) => (
+            <div key={name} style={{ borderTop: `1px solid ${S.border}`, padding: '7px 4px' }}>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'baseline', flexWrap: 'wrap' }}>
+                <b style={{ fontSize: 13 }}>{name}</b>
+                <span style={{ fontSize: 12, color:
+                  s.state === 'ocr' || s.state === 'vision' ? S.ok
+                  : s.state === 'transcribing' ? S.warn
+                  : s.state === 'vision_failed' ? S.error : S.muted }}>
+                  {s.state === 'ocr' && `read by local OCR — mean word confidence ${s.mean_conf}, ${s.words} words, ${s.pages} page${s.pages === 1 ? '' : 's'}`}
+                  {s.state === 'unreadable' && `stored — OCR could not read this scan (mean word confidence ${s.mean_conf}, ${s.words} words)`}
+                  {s.state === 'transcribing' && 'AI transcription running…'}
+                  {s.state === 'vision' && `transcribed with AI — ${fmtUsd(s.vision_usd)} billed`}
+                  {s.state === 'vision_failed' && `AI transcription failed: ${s.error}`}
+                </span>
+                {s.low_confidence && s.state === 'ocr' && (
+                  <span style={{ fontSize: 11, fontWeight: 700, color: S.warn }}>
+                    low confidence — check the extracted rows against the image
+                  </span>
+                )}
+                <span style={{ flex: 1 }} />
+                {(s.state === 'unreadable' || s.state === 'vision_failed') && s.vision_quote && (
+                  <button style={{ ...ghost, padding: '3px 10px', fontSize: 12 }} disabled={!!busy}
+                    onClick={() => transcribe(name)}>
+                    Transcribe with AI (~{fmtUsd(s.vision_quote.est_usd)} for {s.vision_quote.pages} page{s.vision_quote.pages === 1 ? '' : 's'})
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+          {Object.values(b.scans).some((s: any) => s.state === 'transcribing') && log && (
+            <pre style={{
+              fontFamily: mono, fontSize: 11, background: S.surface, borderRadius: 6,
+              border: `1px solid ${S.border}`, padding: 8, maxHeight: 140, overflow: 'auto',
+              whiteSpace: 'pre-wrap', marginTop: 8,
+            }}>{log}</pre>
           )}
         </div>
       )}
@@ -461,7 +439,7 @@ function BatchDetail({ id, onBack, onChanged }: {
 }
 
 function App() {
-  const [authed, setAuthed] = useState<boolean | null>(null);
+  const [authed, letIn] = useUnlock();
   const [batches, setBatches] = useState<any[]>([]);
   const [open, setOpen] = useState<string | null>(null);
   const [tab, setTab] = useState<'queue' | 'data'>('queue');
@@ -475,21 +453,11 @@ function App() {
     }
   }, []);
 
-  useEffect(() => {
-    jsonFetch('/api/admin/session')
-      .then((r) => setAuthed(!!r.ok))
-      .catch(() => setAuthed(false));
-  }, []);
-
   useEffect(() => { if (authed) load(); }, [authed, load]);
 
   if (authed === null) return null;
   if (!authed) {
-    return (
-      <div style={{ fontFamily: font, color: S.text, background: S.surface, minHeight: '100vh' }}>
-        <Login onIn={() => setAuthed(true)} />
-      </div>
-    );
+    return <UnlockScreen title="SNZ Map — review queue" onIn={letIn} />;
   }
 
   return (
@@ -522,10 +490,10 @@ function App() {
             </div>
             {error && <div style={{ color: S.error, fontSize: 13 }}>{error}</div>}
             {tab === 'data' && <DataTab />}
-            {tab === 'queue' && <UploadLinkCard />}
             {tab === 'queue' && batches.length === 0 && (
               <div style={{ ...box, color: S.muted, fontSize: 13 }}>
-                No batches yet. When Yash drops something on his upload link it appears here.
+                No batches yet. When something is dropped on <a href="/add"
+                style={{ color: S.accent }}>the add-data page</a> it appears here.
               </div>
             )}
             {tab === 'queue' && batches.map((b) => (

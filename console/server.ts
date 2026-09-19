@@ -6,6 +6,7 @@ import { Hono } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
 import { basename, join, resolve } from "node:path";
 import { existsSync, readFileSync, statSync } from "node:fs";
+import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 
 type Mode = "development" | "production";
 const app = new Hono();
@@ -21,31 +22,31 @@ const LOCAL_PORT = 5892;
 // `pipeline.webqueue`, which imports the same stages the laptop path uses. The server
 // makes no pipeline decision and holds no pipeline state.
 //
-// Access model (UPLOAD_BUILD_SPEC.md):
-//   /add     — secret link. The token in the URL is the whole credential; a request
-//              without it gets a 404, not a login page, because the route's existence
-//              is part of what the token protects.
-//   /review  — admin password, entered once per session, held as an in-memory cookie
-//              session. A restart forgets sessions; Katey types the password again.
+// Access model (ACCESS_OCR_SPEC.md — supersedes the tokened link + admin password):
+//   One shared passphrase for /add and /review together, entered once per device and
+//   remembered by a long-lived signed cookie. The cookie is a random nonce signed with
+//   an HMAC keyed by the passphrase itself, so rotating SHARED_PASSPHRASE in .env
+//   invalidates every device at once, and the server keeps no session table to forget
+//   on restart. The passphrase never appears in any page or bundle — the pages ship a
+//   lock screen and ask /api/unlock, nothing more.
 //
 // Secrets live in console/.env (gitignored), loaded automatically by Bun at startup.
 
 const REPO = resolve(import.meta.dir, "..");
 const PYTHON = join(REPO, ".venv", "bin", "python");
 const QUEUE_DATA = join(REPO, "pipeline", "webqueue", "data");
-const UPLOAD_TOKEN = (process.env.UPLOAD_TOKEN || "").trim();
-const ADMIN_PASSWORD = (process.env.ADMIN_PASSWORD || "").trim();
-const ADMIN_TTL_MS = 12 * 60 * 60 * 1000;
+const SHARED_PASSPHRASE = (process.env.SHARED_PASSPHRASE || "").trim();
+const UNLOCK_COOKIE = "snz_unlock";
+const UNLOCK_TTL_S = 365 * 24 * 60 * 60;
 
-const adminSessions = new Map<string, number>();
-
-// ANTHROPIC_API_KEY is stripped from every spawn except `extract`. This is the
-// structural guarantee the spec asks for: the upload route's spawns cannot reach the
-// paid API because the process they start never holds the key — the only spawn that
-// does sits behind the admin gate in /api/admin/batches/:id/approve.
+// ANTHROPIC_API_KEY is stripped from every spawn except the two paid stages, `extract`
+// and `transcribe`. This is the structural guarantee the spec asks for: the upload
+// route's spawns cannot reach the paid API because the process they start never holds
+// the key — the only spawns that do sit behind Gate-1 approval routes.
+const PAID_COMMANDS = new Set(["extract", "transcribe"]);
 function envFor(cmd: string): Record<string, string | undefined> {
   const env: Record<string, string | undefined> = { ...process.env };
-  if (cmd !== "extract") delete env.ANTHROPIC_API_KEY;
+  if (!PAID_COMMANDS.has(cmd)) delete env.ANTHROPIC_API_KEY;
   return env;
 }
 
@@ -76,16 +77,17 @@ async function webqueue(cmd: string, args: string[] = [], stdin?: string): Promi
   }
 }
 
-// Extraction runs detached — it is minutes long and the approve request should return
-// immediately. Progress lands in the batch's extract.log and batch.json state, which
-// the review page polls.
-function startExtract(batchId: string): void {
-  const log = join(QUEUE_DATA, batchId, "extract.log");
+// The paid stages run detached — extraction is minutes long, vision transcription can
+// be too, and the approve request should return immediately. Progress lands in the
+// batch's log files and batch.json state, which the review page polls.
+function startPaid(cmd: "extract" | "transcribe", batchId: string, extra: string[] = []): void {
+  const log = join(QUEUE_DATA, batchId, `${cmd}.log`);
   Bun.spawn(
-    ["bash", "-c", 'exec "$PY" -u -m pipeline.webqueue extract --batch "$B" >> "$LOG" 2>&1'],
+    ["bash", "-c", 'exec "$PY" -u -m pipeline.webqueue "$CMD" --batch "$B" "$@" >> "$LOG" 2>&1',
+      "--", ...extra],
     {
       cwd: REPO,
-      env: { ...envFor("extract"), PY: PYTHON, B: batchId, LOG: log },
+      env: { ...envFor(cmd), PY: PYTHON, CMD: cmd, B: batchId, LOG: log },
       stdin: "ignore",
       stdout: "ignore",
       stderr: "ignore",
@@ -93,20 +95,21 @@ function startExtract(batchId: string): void {
   ).unref();
 }
 
-function yashOk(c: Context): boolean {
-  const k = c.req.query("k") || c.req.header("x-upload-token") || "";
-  return UPLOAD_TOKEN.length > 0 && k === UPLOAD_TOKEN;
+// The device-unlock cookie: `nonce.hmac(nonce)`, keyed by the passphrase. Verifying is
+// recomputing the signature — no server-side session state, nothing to expire in
+// practice (the cookie lives ~1 year and re-entering the passphrase mints a new one).
+function signNonce(nonce: string): string {
+  return createHmac("sha256", SHARED_PASSPHRASE).update(`snz-unlock:${nonce}`).digest("hex");
 }
 
-function adminOk(c: Context): boolean {
-  const t = getCookie(c, "snz_admin");
-  if (!t) return false;
-  const exp = adminSessions.get(t);
-  if (!exp || exp < Date.now()) {
-    adminSessions.delete(t);
-    return false;
-  }
-  return true;
+function unlockOk(c: Context): boolean {
+  if (!SHARED_PASSPHRASE) return false;
+  const v = getCookie(c, UNLOCK_COOKIE) || "";
+  const dot = v.indexOf(".");
+  if (dot < 1) return false;
+  const mac = Buffer.from(v.slice(dot + 1));
+  const want = Buffer.from(signNonce(v.slice(0, dot)));
+  return mac.length === want.length && timingSafeEqual(mac, want);
 }
 
 function safeBatchId(raw: string): string | null {
@@ -116,9 +119,33 @@ function safeBatchId(raw: string): string | null {
 function configureQueueApi(app: Hono) {
   const denied = (c: Context) => c.json({ error: "unauthorized" }, 401);
 
-  // ── Yash's side: free stages only ──────────────────────────────────────────
-  app.post("/api/upload", async (c) => {
-    if (!yashOk(c)) return denied(c);
+  // ── The one door: enter the shared passphrase, get the device cookie ───────
+  app.post("/api/unlock", async (c) => {
+    const { passphrase } = await c.req.json().catch(() => ({}) as any);
+    const given = Buffer.from(String(passphrase || "").trim());
+    const want = Buffer.from(SHARED_PASSPHRASE);
+    const ok = SHARED_PASSPHRASE.length > 0 && given.length === want.length
+      && timingSafeEqual(given, want);
+    if (!ok) return c.json({ error: "that's not it — check with Katey" }, 401);
+    const nonce = randomBytes(16).toString("hex");
+    setCookie(c, UNLOCK_COOKIE, `${nonce}.${signNonce(nonce)}`, {
+      httpOnly: true,
+      sameSite: "Lax",
+      secure: mode === "production",
+      path: "/",
+      maxAge: UNLOCK_TTL_S,
+    });
+    return c.json({ ok: true });
+  });
+
+  app.get("/api/unlock/session", (c) => c.json({ ok: unlockOk(c) }));
+
+  const unlocked =
+    (handler: (c: Context) => Promise<Response> | Response) => async (c: Context) =>
+      unlockOk(c) ? handler(c) : denied(c);
+
+  // ── Upload side: free stages only (structurally unable to spend) ───────────
+  app.post("/api/upload", unlocked(async (c) => {
     const body = await c.req.parseBody({ all: true });
     const note = typeof body.note === "string" ? body.note : "";
     let pasted: unknown[] = [];
@@ -149,18 +176,16 @@ function configureQueueApi(app: Hono) {
     const ingested = await webqueue("ingest", ["--batch", id]);
     if (!ingested.ok) return c.json({ error: ingested.error, batch: id }, 500);
     return c.json(ingested.data);
-  });
+  }));
 
-  app.get("/api/upload/:id", async (c) => {
-    if (!yashOk(c)) return denied(c);
+  app.get("/api/upload/:id", unlocked(async (c) => {
     const id = safeBatchId(c.req.param("id"));
     if (!id) return c.json({ error: "bad batch id" }, 400);
     const r = await webqueue("detail", ["--batch", id]);
     return r.ok ? c.json(r.data) : c.json({ error: r.error }, 500);
-  });
+  }));
 
-  app.post("/api/upload/:id/map", async (c) => {
-    if (!yashOk(c)) return denied(c);
+  app.post("/api/upload/:id/map", unlocked(async (c) => {
     const id = safeBatchId(c.req.param("id"));
     if (!id) return c.json({ error: "bad batch id" }, 400);
     const { file, mapping } = await c.req.json().catch(() => ({}) as any);
@@ -173,60 +198,23 @@ function configureQueueApi(app: Hono) {
       JSON.stringify(mapping),
     );
     return r.ok ? c.json(r.data) : c.json({ error: r.error }, 500);
-  });
+  }));
 
-  // ── Katey's side: both gates ───────────────────────────────────────────────
-  app.post("/api/admin/login", async (c) => {
-    const { password } = await c.req.json().catch(() => ({}) as any);
-    if (!ADMIN_PASSWORD || password !== ADMIN_PASSWORD) {
-      return c.json({ error: "wrong password" }, 401);
-    }
-    const token = crypto.randomUUID();
-    adminSessions.set(token, Date.now() + ADMIN_TTL_MS);
-    for (const [t, exp] of adminSessions) if (exp < Date.now()) adminSessions.delete(t);
-    setCookie(c, "snz_admin", token, {
-      httpOnly: true,
-      sameSite: "Lax",
-      secure: mode === "production",
-      path: "/",
-      maxAge: ADMIN_TTL_MS / 1000,
-    });
-    return c.json({ ok: true });
-  });
-
-  app.get("/api/admin/session", (c) => c.json({ ok: adminOk(c) }));
-
-  const admin =
-    (handler: (c: Context) => Promise<Response> | Response) => async (c: Context) =>
-      adminOk(c) ? handler(c) : denied(c);
-
-  app.get("/api/admin/batches", admin(async (c) => {
+  // ── Review side: both gates. Same unlock; the gates are the deliberate button
+  // clicks with cost shown, not a second password. ───────────────────────────
+  app.get("/api/admin/batches", unlocked(async (c) => {
     const r = await webqueue("list");
     return r.ok ? c.json(r.data) : c.json({ error: r.error }, 500);
   }));
 
-  // Yash's tokened link, so Katey can re-send it without asking Zo. Served only from
-  // behind the admin gate — the token must never appear in any public page or bundle,
-  // which is why this is an API response and not something the /review HTML ships with.
-  app.get("/api/admin/upload-link", admin(async (c) => {
-    if (!UPLOAD_TOKEN) return c.json({ error: "no upload token configured" }, 500);
-    const host = c.req.header("x-forwarded-host") || c.req.header("host")
-      || `localhost:${LOCAL_PORT}`;
-    // Scheme from the host, not from x-forwarded-proto: the tunnel terminates TLS and
-    // reports its inside leg (http), which would hand Katey a link that redirects at
-    // best. Anything that is not localhost is only reachable over https.
-    const proto = /^(localhost|127\.)/.test(host) ? "http" : "https";
-    return c.json({ url: `${proto}://${host}/add?k=${encodeURIComponent(UPLOAD_TOKEN)}` });
-  }));
-
   // The data browser: everything the store holds, read-only. The webqueue spawn never
-  // receives the API key (envFor strips it for every command except extract).
-  app.get("/api/admin/browse", admin(async (c) => {
+  // receives the API key (envFor strips it for every command except the paid stages).
+  app.get("/api/admin/browse", unlocked(async (c) => {
     const r = await webqueue("browse");
     return r.ok ? c.json(r.data) : c.json({ error: r.error }, 500);
   }));
 
-  app.get("/api/admin/batches/:id", admin(async (c) => {
+  app.get("/api/admin/batches/:id", unlocked(async (c) => {
     const id = safeBatchId(c.req.param("id"));
     if (!id) return c.json({ error: "bad batch id" }, 400);
     const r = await webqueue("detail", ["--batch", id]);
@@ -234,7 +222,7 @@ function configureQueueApi(app: Hono) {
   }));
 
   // Gate 1 — spend. The only route in the server that starts a key-holding process.
-  app.post("/api/admin/batches/:id/approve", admin(async (c) => {
+  app.post("/api/admin/batches/:id/approve", unlocked(async (c) => {
     const id = safeBatchId(c.req.param("id"));
     if (!id) return c.json({ error: "bad batch id" }, 400);
     const d = await webqueue("detail", ["--batch", id]);
@@ -243,14 +231,28 @@ function configureQueueApi(app: Hono) {
     if (state !== "quoted" && state !== "failed") {
       return c.json({ error: `batch is ${state} — approve applies to a quoted batch` }, 409);
     }
-    startExtract(id);
+    startPaid("extract", id);
     return c.json({ started: true });
   }));
 
-  app.get("/api/admin/batches/:id/log", admin(async (c) => {
+  // Gate 1 again, for a scan local OCR could not read: paid vision transcription of one
+  // file, quoted per page on the review screen before this button exists to press.
+  app.post("/api/admin/batches/:id/transcribe", unlocked(async (c) => {
     const id = safeBatchId(c.req.param("id"));
     if (!id) return c.json({ error: "bad batch id" }, 400);
-    const log = join(QUEUE_DATA, id, "extract.log");
+    const { file } = await c.req.json().catch(() => ({}) as any);
+    if (typeof file !== "string" || !file) return c.json({ error: "need { file }" }, 400);
+    const r = await webqueue("transcribe-start", ["--batch", id, "--file", basename(file)]);
+    if (!r.ok) return c.json({ error: r.error }, 500);
+    startPaid("transcribe", id, ["--file", basename(file)]);
+    return c.json({ started: true });
+  }));
+
+  app.get("/api/admin/batches/:id/log", unlocked(async (c) => {
+    const id = safeBatchId(c.req.param("id"));
+    if (!id) return c.json({ error: "bad batch id" }, 400);
+    const kind = c.req.query("kind") === "transcribe" ? "transcribe.log" : "extract.log";
+    const log = join(QUEUE_DATA, id, kind);
     if (!existsSync(log)) return c.json({ log: "" });
     const size = statSync(log).size;
     const text = readFileSync(log, "utf-8");
@@ -258,7 +260,7 @@ function configureQueueApi(app: Hono) {
   }));
 
   // Gate 2 — content. Exclusions are tagged and kept; nothing is deleted.
-  app.post("/api/admin/batches/:id/exclude", admin(async (c) => {
+  app.post("/api/admin/batches/:id/exclude", unlocked(async (c) => {
     const id = safeBatchId(c.req.param("id"));
     if (!id) return c.json({ error: "bad batch id" }, 400);
     const { event_id, reason, undo } = await c.req.json().catch(() => ({}) as any);
@@ -271,14 +273,14 @@ function configureQueueApi(app: Hono) {
     return r.ok ? c.json(r.data) : c.json({ error: r.error }, 500);
   }));
 
-  app.post("/api/admin/batches/:id/publish", admin(async (c) => {
+  app.post("/api/admin/batches/:id/publish", unlocked(async (c) => {
     const id = safeBatchId(c.req.param("id"));
     if (!id) return c.json({ error: "bad batch id" }, 400);
     const r = await webqueue("publish", ["--batch", id]);
     return r.ok ? c.json(r.data) : c.json({ error: r.error }, 500);
   }));
 
-  app.post("/api/admin/batches/:id/discard", admin(async (c) => {
+  app.post("/api/admin/batches/:id/discard", unlocked(async (c) => {
     const id = safeBatchId(c.req.param("id"));
     if (!id) return c.json({ error: "bad batch id" }, 400);
     const r = await webqueue("discard", ["--batch", id]);
@@ -307,10 +309,13 @@ export default {
 function configureProduction(app: Hono) {
   app.get("/console", serveStatic({ path: "./dist/index.html" }));
   app.get("/console/", serveStatic({ path: "./dist/index.html" }));
-  // The token is checked before the page is served, not just before the API answers:
-  // without it the route 404s rather than presenting an upload form that cannot work.
+  // Plain URL. Old bookmarked /add?k=… links redirect here with the dead token
+  // stripped, so nothing Yash saved breaks. The page itself holds no secret — it shows
+  // the passphrase screen until the device carries the unlock cookie.
   app.get("/add", (c, next) =>
-    yashOk(c) ? serveStatic({ path: "./dist/add.html" })(c, next) : c.notFound(),
+    c.req.query("k") !== undefined
+      ? c.redirect("/add")
+      : serveStatic({ path: "./dist/add.html" })(c, next),
   );
   app.get("/review", serveStatic({ path: "./dist/review.html" }));
   app.use("/assets/*", serveStatic({ root: "./dist" }));
@@ -347,7 +352,7 @@ async function configureDevelopment(app: Hono): Promise<ViteDevServer> {
         return c.html(template, { headers: noStore });
       }
       if (url === "/add") {
-        if (!yashOk(c)) return c.notFound();
+        if (c.req.query("k") !== undefined) return c.redirect("/add");
         let template = await Bun.file("./add.html").text();
         template = await vite.transformIndexHtml(url, template);
         return c.html(template, { headers: noStore });

@@ -25,10 +25,12 @@ ROOT = Path(__file__).resolve().parent.parent          # pipeline/
 DATA = Path(__file__).resolve().parent / "data"        # pipeline/webqueue/data/
 BASELINE = Path(__file__).resolve().parent / "baseline_contract_events.json"
 
-# Article formats the ingest stage reads. Tables are handled by pipeline.tabular; anything
-# else is listed as skipped with the reason, never silently ignored.
+# Article formats the ingest stage reads. Tables are handled by pipeline.tabular; scan
+# images by ingest.ocr (never turned away — ACCESS_OCR_SPEC.md); anything else is
+# listed as skipped with the reason, never silently ignored.
 ARTICLE_SUFFIXES = {".txt", ".text", ".htm", ".html", ".rtf", ".pdf", ".docx"}
 TABLE_SUFFIXES = {".csv", ".xlsx"}
+IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".tif", ".tiff", ".webp"}
 
 
 def _now() -> str:
@@ -77,6 +79,7 @@ def create_batch(note: str = "", pasted: list[dict[str, Any]] | None = None) -> 
         "parse": None,
         "quote": None,
         "tables": {},
+        "scans": {},
         "extract": None,
         "excluded_by_reviewer": [],
         "approved_content": False,

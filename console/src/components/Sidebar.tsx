@@ -661,9 +661,11 @@ export function Sidebar({
         </ul>
       </details>
 
-      {/* Discreet on purpose: the map is the public page, the queue is the workbench.
-          Safe on a public page — the password gate is on the other side of the link. */}
+      {/* The one door onto the data. A clear button on purpose — Katey and Yash reach the
+          upload page from here. Safe on a public page: the passphrase gate is on the other
+          side, and this bundle carries no secret. */}
       <div style={reviewLinkWrapStyle}>
+        <a href="/add" style={addDataButtonStyle}>＋ Add data</a>
         <a href="/review" style={reviewLinkStyle}>Review queue →</a>
       </div>
     </aside>
@@ -809,6 +811,22 @@ const reviewLinkWrapStyle: React.CSSProperties = {
   marginTop: 12,
   paddingTop: 10,
   borderTop: `1px solid ${BORDER}`,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: 10,
+};
+
+const addDataButtonStyle: React.CSSProperties = {
+  display: 'inline-block',
+  padding: '7px 14px',
+  background: ACCENT_SOFT,
+  border: `1px solid ${ACCENT}`,
+  borderRadius: 6,
+  color: ACCENT_TEXT,
+  fontSize: 12,
+  fontWeight: 600,
+  textDecoration: 'none',
 };
 
 const reviewLinkStyle: React.CSSProperties = {
