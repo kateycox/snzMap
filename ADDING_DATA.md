@@ -5,8 +5,14 @@ How a new person gets articles or a spreadsheet onto the map.
 > For what the project is, what is true about it today, and how to read the console, start
 > with **[HANDOFF.md](HANDOFF.md)**. This file is the operating manual.
 
-Read this first: **there is no upload button, no Google Drive folder, and no web form.**
-Everything below is a command run on a laptop that has the repo checked out.
+> **Update 2026-09-19:** there is now a hosted upload path — see *The hosted front door*
+> in [HANDOFF.md](HANDOFF.md). It exists because the barrier named below finally moved:
+> the console's server now runs the pipeline and holds the key, behind two approval gates.
+> The web form still refuses to hide the cost — it quotes and stops, and only Katey can
+> approve the spend. Everything below remains true for the laptop path.
+
+Read this first: **on a laptop, there is no upload button, no Google Drive folder, and no
+web form.** Everything below is a command run on a laptop that has the repo checked out.
 
 There is, however, **one command**. If you have a folder of articles and just want them on
 the map, this is the whole procedure:

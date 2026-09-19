@@ -154,6 +154,46 @@ names and more chances to match the wrong one. Re-run the audit after any spine 
 
 Full detail is in **[ADDING_DATA.md](ADDING_DATA.md)**. The short version:
 
+### The hosted front door (added 2026-09-19)
+
+There is now a web path onto the map, running inside the hosted console at
+`snzmap-kikib.zocomputer.io`. Two pages, two gates, both Katey's:
+
+- **`/add?k=<token>`** — a secret link for dropping research: article exports, spreadsheets,
+  or pasted text with typed provenance. Everything on it is free — files are parsed and
+  priced at the measured per-article rate, then the batch waits. The upload path holds no
+  API key; it is structurally unable to spend money.
+- **`/review`** — admin password. Gate 1 approves the quoted spend (extraction runs in the
+  background); Gate 2 shows every extracted/mapped row, lets Katey exclude rows *with a
+  reason, kept never deleted*, and publishes.
+
+**The merge design, because it is the part that protects the map:** the canonical
+`output/contract_events.json` on the server is always rebuilt as the committed baseline
+(`pipeline/webqueue/baseline_contract_events.json`, the 178 pre-web events) **plus** every
+approved batch under `pipeline/webqueue/data/` (gitignored, server-local). It is never
+regenerated from `articles.json`, which on the server holds only the latest upload — that
+regeneration is the path that would have wiped the 178 events.
+
+**Consequences for anyone working from a clone:**
+
+- **The server is canonical for the contract layers.** `git pull` before rebuilding
+  locally, and never push a locally rebuilt `contract_events.json` / tenure geojson over
+  the server's — a fresh clone knows nothing about published web batches.
+- Folding published batches into the committed baseline is a deliberate maintenance step
+  (copy the server's `output/contract_events.json` over the baseline file, commit both it
+  and the rebuilt outputs), not something the publish button does.
+- Secrets live in `console/.env` (gitignored): the upload token, the admin password, and
+  the extraction API key. The generic spreadsheet loader is `pipeline/tabular/`; the web
+  queue CLI is `pipeline/webqueue/` — Bun orchestrates, Python decides.
+- CSV rows join the spine only through two gates (name **and** state-or-dated-year);
+  every exclusion is tagged and browsable. Same rule as everywhere else in this repo: a
+  name match alone never joins.
+- **Do not commit `output/review_queue.csv` from the server.** Publishing regenerates it,
+  and the server has no `articles.json` (gitignored), so the server's copy is missing the
+  499 defective-source-document rows the committed one carries. Committing it would roll
+  that record backwards — the exact stale-copy trap `--publish`'s two-file rule exists
+  to prevent.
+
 ### Articles — the path that works
 
 Put your files in a folder anywhere (`.txt` `.html` `.rtf` `.pdf` `.docx`), then:

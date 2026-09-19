@@ -4,6 +4,10 @@ dist/
 .env
 pipeline/raw/
 pipeline/articles/raw/
+
+# Web upload queue: uploaded files and per-batch working state. Same reasoning as
+# articles/raw/ — uploads may contain licensed prose, and batch state is server-local.
+pipeline/webqueue/data/
 __pycache__/
 *.pyc
 
