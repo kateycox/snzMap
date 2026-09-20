@@ -18,3 +18,9 @@ pipeline/output/articles.json
 
 # Local tool permissions, not project configuration.
 .claude/settings.local.json
+
+# Raw USB drops may contain licensed source documents and should stay local.
+/inbox/
+
+# OCR text from scanned source articles is derived licensed full text; keep it local.
+pipeline/output/scans_ocr.jsonl

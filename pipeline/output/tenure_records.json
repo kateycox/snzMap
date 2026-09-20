@@ -240,6 +240,39 @@
     }
   },
   {
+    "tenure_id": "sp-25d8d56851",
+    "venue_id": null,
+    "venue_name": "Charles Egeler Reception and Guidance Center",
+    "venue_type": "other",
+    "city": null,
+    "state": null,
+    "lat": null,
+    "lng": null,
+    "operator": "Trinity Services Group",
+    "operator_normalized": "Trinity Services Group",
+    "start_date": null,
+    "start_precision": null,
+    "end_date": null,
+    "end_precision": null,
+    "end_status": "unknown",
+    "exit_mode": null,
+    "derived_from": [
+      "ev_385b345d4e5ea75c"
+    ],
+    "source": "|Detroit Free Press (1923-), General edition; Detroit | 2016-09-09",
+    "notes": null,
+    "extras": {
+      "needs_review": true,
+      "review_reasons": [
+        "presence only (violation) \u2014 operator was here, but no award was reported",
+        "start_date unknown",
+        "venue never matched the spine \u2014 not mappable"
+      ],
+      "known_through": "2016-09-06",
+      "event_count": 1
+    }
+  },
+  {
     "tenure_id": "sp-3a13a82a20",
     "venue_id": null,
     "venue_name": "Clemson",
@@ -275,7 +308,43 @@
     }
   },
   {
-    "tenure_id": "sp-ebf9cac462",
+    "tenure_id": "sp-cee73f1eeb",
+    "venue_id": null,
+    "venue_name": "Cotton Correctional Facility",
+    "venue_type": "other",
+    "city": null,
+    "state": null,
+    "lat": null,
+    "lng": null,
+    "operator": "Aramark Correctional Services",
+    "operator_normalized": "Aramark Correctional Services",
+    "start_date": null,
+    "start_precision": null,
+    "end_date": "2015-09-01",
+    "end_precision": "month",
+    "end_status": "ended",
+    "exit_mode": "lost_bid",
+    "derived_from": [
+      "ev_c9f4c254ef9ba6d2"
+    ],
+    "source": "|Lansing State Journal (1980-); Lansing, Michigan | 2016-09-07",
+    "notes": null,
+    "extras": {
+      "needs_review": true,
+      "review_reasons": [
+        "run ends with no award ever reported \u2014 start unknown",
+        "start_date unknown",
+        "venue never matched the spine \u2014 not mappable"
+      ],
+      "known_through": "2015-09-01",
+      "event_count": 1,
+      "sub_brands": [
+        "Aramark Correctional Services"
+      ]
+    }
+  },
+  {
+    "tenure_id": "sp-7e1ed4c8b1",
     "venue_id": null,
     "venue_name": "Cotton Correctional Facility",
     "venue_type": "other",
@@ -285,27 +354,27 @@
     "lng": null,
     "operator": "Trinity Food Services",
     "operator_normalized": "Trinity Food Services",
-    "start_date": null,
-    "start_precision": null,
+    "start_date": "2015-09-01",
+    "start_precision": "month",
     "end_date": null,
     "end_precision": null,
     "end_status": "unknown",
     "exit_mode": null,
     "derived_from": [
+      "ev_a74ebb5cdd71aa57",
       "ev_5b17059ccc583b50",
-      "ev_a36bf206a66e4483"
+      "ev_a36bf206a66e4483",
+      "ev_c29721371ec3ee5d"
     ],
-    "source": "|Detroit Free Press; Detroit, Mich. | 2016-09-07; |Lansing State Journal; Lansing, Mich. | 2016-09-07",
+    "source": "|Lansing State Journal (1980-); Lansing, Michigan | 2016-09-07; |Detroit Free Press; Detroit, Mich. | 2016-09-07; |Lansing State Journal; Lansing, Mich. | 2016-09-07",
     "notes": null,
     "extras": {
       "needs_review": true,
       "review_reasons": [
-        "presence only (violation) \u2014 operator was here, but no award was reported",
-        "start_date unknown",
         "venue never matched the spine \u2014 not mappable"
       ],
       "known_through": "2016-09-01",
-      "event_count": 1
+      "event_count": 2
     }
   },
   {
@@ -404,7 +473,38 @@
     }
   },
   {
-    "tenure_id": "sp-c565079fbc",
+    "tenure_id": "sp-ccc7becec3",
+    "venue_id": null,
+    "venue_name": "El Paso County jail",
+    "venue_type": "other",
+    "city": null,
+    "state": null,
+    "lat": null,
+    "lng": null,
+    "operator": "Aramark Correctional Services",
+    "operator_normalized": "Aramark Correctional Services",
+    "start_date": "2016-11-22",
+    "start_precision": "approx",
+    "end_date": null,
+    "end_precision": null,
+    "end_status": "unknown",
+    "exit_mode": null,
+    "derived_from": [
+      "ev_59473e631b20be42"
+    ],
+    "source": "|El Paso Times (1921-); El Paso, Texas | 2016-11-22",
+    "notes": null,
+    "extras": {
+      "needs_review": true,
+      "review_reasons": [
+        "venue never matched the spine \u2014 not mappable"
+      ],
+      "known_through": "2016-11-22",
+      "event_count": 1
+    }
+  },
+  {
+    "tenure_id": "sp-4b8ea03742",
     "venue_id": null,
     "venue_name": "FGCU",
     "venue_type": "other",
@@ -421,23 +521,24 @@
     "end_status": "unknown",
     "exit_mode": null,
     "derived_from": [
-      "ev_1ce7bd4d51695bb7"
+      "ev_1ce7bd4d51695bb7",
+      "ev_1fd54b0ad22e696b"
     ],
-    "source": "|The News Press; Fort Myers, Fla. | 2016-08-17",
+    "source": "|The News Press; Fort Myers, Fla. | 2016-08-17; |Fort Myers News-Press (1931-); Fort Myers, Florida | 2016-08-17",
     "notes": null,
     "extras": {
       "needs_review": true,
       "review_reasons": [
-        "1 undated event(s) could not be placed on the timeline",
+        "2 undated event(s) could not be placed on the timeline",
         "start_date unknown",
         "venue never matched the spine \u2014 not mappable"
       ],
       "known_through": null,
-      "event_count": 1
+      "event_count": 2
     }
   },
   {
-    "tenure_id": "sp-fe702bd682",
+    "tenure_id": "sp-0f3163fcef",
     "venue_id": null,
     "venue_name": "FGCU",
     "venue_type": "other",
@@ -454,19 +555,20 @@
     "end_status": "unknown",
     "exit_mode": null,
     "derived_from": [
-      "ev_ba3582e42d4248f2"
+      "ev_ba3582e42d4248f2",
+      "ev_75dc376256868b77"
     ],
-    "source": "|The News Press; Fort Myers, Fla. | 2016-08-17",
+    "source": "|The News Press; Fort Myers, Fla. | 2016-08-17; |Fort Myers News-Press (1931-); Fort Myers, Florida | 2016-08-17",
     "notes": null,
     "extras": {
       "needs_review": true,
       "review_reasons": [
-        "1 undated event(s) could not be placed on the timeline",
+        "2 undated event(s) could not be placed on the timeline",
         "start_date unknown",
         "venue never matched the spine \u2014 not mappable"
       ],
       "known_through": null,
-      "event_count": 1,
+      "event_count": 2,
       "sub_brands": [
         "Chartwells"
       ]
@@ -601,6 +703,72 @@
         "venue never matched the spine \u2014 not mappable"
       ],
       "known_through": "2016-10-01",
+      "event_count": 1
+    }
+  },
+  {
+    "tenure_id": "sp-9d2c03dd3b",
+    "venue_id": null,
+    "venue_name": "Huron Lodge",
+    "venue_type": "other",
+    "city": null,
+    "state": null,
+    "lat": null,
+    "lng": null,
+    "operator": "Aramark",
+    "operator_normalized": "Aramark",
+    "start_date": null,
+    "start_precision": null,
+    "end_date": null,
+    "end_precision": null,
+    "end_status": "unknown",
+    "exit_mode": null,
+    "derived_from": [
+      "ev_87fdec05e74e1af7"
+    ],
+    "source": "|Windsor Star (1959-); Windsor, Ontario | 2017-01-18",
+    "notes": null,
+    "extras": {
+      "needs_review": true,
+      "review_reasons": [
+        "1 undated event(s) could not be placed on the timeline",
+        "start_date unknown",
+        "venue never matched the spine \u2014 not mappable"
+      ],
+      "known_through": null,
+      "event_count": 1
+    }
+  },
+  {
+    "tenure_id": "sp-9a51aea640",
+    "venue_id": null,
+    "venue_name": "ICA",
+    "venue_type": "other",
+    "city": null,
+    "state": null,
+    "lat": null,
+    "lng": null,
+    "operator": "Sodexo",
+    "operator_normalized": "Sodexo",
+    "start_date": null,
+    "start_precision": null,
+    "end_date": null,
+    "end_precision": null,
+    "end_status": "unknown",
+    "exit_mode": null,
+    "derived_from": [
+      "ev_8d6f334a3ff5a29b"
+    ],
+    "source": "|London Evening Standard (2011-2018); London (UK) | 2016-10-19",
+    "notes": null,
+    "extras": {
+      "needs_review": true,
+      "review_reasons": [
+        "1 undated event(s) could not be placed on the timeline",
+        "start_date unknown",
+        "venue never matched the spine \u2014 not mappable"
+      ],
+      "known_through": null,
       "event_count": 1
     }
   },
@@ -950,6 +1118,39 @@
     }
   },
   {
+    "tenure_id": "sp-9c6565cd36",
+    "venue_id": null,
+    "venue_name": "MDOC facilities",
+    "venue_type": "other",
+    "city": null,
+    "state": null,
+    "lat": null,
+    "lng": null,
+    "operator": "Aramark",
+    "operator_normalized": "Aramark",
+    "start_date": null,
+    "start_precision": null,
+    "end_date": "2015-01-01",
+    "end_precision": "year",
+    "end_status": "ended",
+    "exit_mode": "lost_bid",
+    "derived_from": [
+      "ev_a3d71eba3519a8d3"
+    ],
+    "source": "|The Tennessean (1972-); Nashville | 2016-08-08",
+    "notes": null,
+    "extras": {
+      "needs_review": true,
+      "review_reasons": [
+        "run ends with no award ever reported \u2014 start unknown",
+        "start_date unknown",
+        "venue never matched the spine \u2014 not mappable"
+      ],
+      "known_through": "2015-01-01",
+      "event_count": 1
+    }
+  },
+  {
     "tenure_id": "sp-77c80aed1b",
     "venue_id": null,
     "venue_name": "Michigan",
@@ -1260,6 +1461,235 @@
     }
   },
   {
+    "tenure_id": "sp-00c0c179e1",
+    "venue_id": null,
+    "venue_name": "Michigan state prisons",
+    "venue_type": "other",
+    "city": null,
+    "state": null,
+    "lat": null,
+    "lng": null,
+    "operator": "Aramark Correctional Services",
+    "operator_normalized": "Aramark Correctional Services",
+    "start_date": "2013-12-01",
+    "start_precision": "month",
+    "end_date": "2015-08-01",
+    "end_precision": "month",
+    "end_status": "ended",
+    "exit_mode": "lost_bid",
+    "derived_from": [
+      "ev_eb9906d9c9b65c65",
+      "ev_a0035b7360e519ef"
+    ],
+    "source": "|Detroit Free Press (1923-), General edition; Detroit | 2016-09-09",
+    "notes": null,
+    "extras": {
+      "needs_review": true,
+      "review_reasons": [
+        "venue never matched the spine \u2014 not mappable"
+      ],
+      "known_through": "2015-08-01",
+      "event_count": 2
+    }
+  },
+  {
+    "tenure_id": "sp-801a05dfb4",
+    "venue_id": null,
+    "venue_name": "Michigan state prisons",
+    "venue_type": "other",
+    "city": null,
+    "state": null,
+    "lat": null,
+    "lng": null,
+    "operator": "Trinity Services Group",
+    "operator_normalized": "Trinity Services Group",
+    "start_date": "2015-08-01",
+    "start_precision": "month",
+    "end_date": null,
+    "end_precision": null,
+    "end_status": "unknown",
+    "exit_mode": null,
+    "derived_from": [
+      "ev_27e0d3480585c6b5"
+    ],
+    "source": "|Detroit Free Press (1923-), General edition; Detroit | 2016-09-09",
+    "notes": null,
+    "extras": {
+      "needs_review": true,
+      "review_reasons": [
+        "venue never matched the spine \u2014 not mappable"
+      ],
+      "known_through": "2015-08-01",
+      "event_count": 1
+    }
+  },
+  {
+    "tenure_id": "sp-1f323bcd34",
+    "venue_id": null,
+    "venue_name": "Michigan's prison",
+    "venue_type": "other",
+    "city": null,
+    "state": null,
+    "lat": null,
+    "lng": null,
+    "operator": "Aramark Correctional Services",
+    "operator_normalized": "Aramark Correctional Services",
+    "start_date": null,
+    "start_precision": null,
+    "end_date": "2015-09-01",
+    "end_precision": "month",
+    "end_status": "ended",
+    "exit_mode": "lost_bid",
+    "derived_from": [
+      "ev_b38f5fae6dcbe24f"
+    ],
+    "source": "|Lansing State Journal (1980-); Lansing, Michigan | 2017-01-21",
+    "notes": null,
+    "extras": {
+      "needs_review": true,
+      "review_reasons": [
+        "run ends with no award ever reported \u2014 start unknown",
+        "start_date unknown",
+        "venue never matched the spine \u2014 not mappable"
+      ],
+      "known_through": "2015-09-01",
+      "event_count": 1
+    }
+  },
+  {
+    "tenure_id": "sp-db221d4749",
+    "venue_id": null,
+    "venue_name": "Michigan's prison",
+    "venue_type": "other",
+    "city": null,
+    "state": null,
+    "lat": null,
+    "lng": null,
+    "operator": "Trinity Services Group",
+    "operator_normalized": "Trinity Services Group",
+    "start_date": "2015-09-01",
+    "start_precision": "month",
+    "end_date": null,
+    "end_precision": null,
+    "end_status": "unknown",
+    "exit_mode": null,
+    "derived_from": [
+      "ev_241afad96bdaedbb",
+      "ev_26ec472cd908b475"
+    ],
+    "source": "|Lansing State Journal (1980-); Lansing, Michigan | 2017-01-21",
+    "notes": null,
+    "extras": {
+      "needs_review": true,
+      "review_reasons": [
+        "1 undated event(s) could not be placed on the timeline",
+        "venue never matched the spine \u2014 not mappable"
+      ],
+      "known_through": "2015-09-01",
+      "event_count": 2
+    }
+  },
+  {
+    "tenure_id": "sp-834dc44505",
+    "venue_id": null,
+    "venue_name": "MPEC",
+    "venue_type": "other",
+    "city": null,
+    "state": null,
+    "lat": null,
+    "lng": null,
+    "operator": "Spectra",
+    "operator_normalized": "Spectra",
+    "start_date": "2016-10-01",
+    "start_precision": "approx",
+    "end_date": null,
+    "end_precision": null,
+    "end_status": "unknown",
+    "exit_mode": null,
+    "derived_from": [
+      "ev_1d9ef998874af608",
+      "ev_ae8e657b29a88f4e"
+    ],
+    "source": "|Times Record News (1987-); Wichita Falls, Texas | 2016-12-28; |Times Record News (1987-); Wichita Falls, Texas | 2016-11-06",
+    "notes": null,
+    "extras": {
+      "needs_review": true,
+      "review_reasons": [
+        "1 undated event(s) could not be placed on the timeline",
+        "venue never matched the spine \u2014 not mappable"
+      ],
+      "known_through": "2016-10-01",
+      "event_count": 2,
+      "sub_brands": [
+        "Spectra Food Services"
+      ]
+    }
+  },
+  {
+    "tenure_id": "sp-2bc706d5d0",
+    "venue_id": null,
+    "venue_name": "MPEC",
+    "venue_type": "other",
+    "city": null,
+    "state": null,
+    "lat": null,
+    "lng": null,
+    "operator": "city of Wichita Falls",
+    "operator_normalized": "city of Wichita Falls",
+    "start_date": null,
+    "start_precision": null,
+    "end_date": null,
+    "end_precision": null,
+    "end_status": "unknown",
+    "exit_mode": null,
+    "derived_from": [
+      "ev_dfc814aa919b8b54"
+    ],
+    "source": "|Times Record News (1987-); Wichita Falls, Texas | 2016-11-06",
+    "notes": null,
+    "extras": {
+      "needs_review": true,
+      "review_reasons": [
+        "1 undated event(s) could not be placed on the timeline",
+        "start_date unknown",
+        "venue never matched the spine \u2014 not mappable"
+      ],
+      "known_through": null,
+      "event_count": 1
+    }
+  },
+  {
+    "tenure_id": "sp-11c3a2283f",
+    "venue_id": null,
+    "venue_name": "NCH",
+    "venue_type": "other",
+    "city": null,
+    "state": null,
+    "lat": null,
+    "lng": null,
+    "operator": "Sodexo",
+    "operator_normalized": "Sodexo",
+    "start_date": "2012-01-01",
+    "start_precision": "year",
+    "end_date": null,
+    "end_precision": null,
+    "end_status": "unknown",
+    "exit_mode": null,
+    "derived_from": [
+      "ev_b5d80f3dba8630c0"
+    ],
+    "source": "|The Naples Daily News (1970-); Naples, Florida | 2016-08-27",
+    "notes": null,
+    "extras": {
+      "needs_review": true,
+      "review_reasons": [
+        "venue never matched the spine \u2014 not mappable"
+      ],
+      "known_through": "2012-01-01",
+      "event_count": 1
+    }
+  },
+  {
     "tenure_id": "sp-8ede7be3f5",
     "venue_id": null,
     "venue_name": "NCH Healthcare System",
@@ -1277,9 +1707,10 @@
     "end_status": "unknown",
     "exit_mode": null,
     "derived_from": [
-      "ev_9bca26df1c10411c"
+      "ev_9bca26df1c10411c",
+      "ev_0cb9308519ad8486"
     ],
-    "source": "|The News Press; Fort Myers, Fla. | 2016-08-27",
+    "source": "|The News Press; Fort Myers, Fla. | 2016-08-27; |Fort Myers News-Press (1931-); Fort Myers, Florida | 2016-08-27",
     "notes": null,
     "extras": {
       "needs_review": true,
@@ -1554,6 +1985,39 @@
     }
   },
   {
+    "tenure_id": "sp-4811e10f87",
+    "venue_id": null,
+    "venue_name": "Saint Leo University",
+    "venue_type": "other",
+    "city": null,
+    "state": null,
+    "lat": null,
+    "lng": null,
+    "operator": "Sodexo",
+    "operator_normalized": "Sodexo",
+    "start_date": null,
+    "start_precision": null,
+    "end_date": "2016-09-29",
+    "end_precision": "exact",
+    "end_status": "ended",
+    "exit_mode": "lost_bid",
+    "derived_from": [
+      "ev_ffaf904ae6c2214e"
+    ],
+    "source": "|Tampa Bay Times (2012-); Tampa Bay, Florida | 2016-08-17",
+    "notes": null,
+    "extras": {
+      "needs_review": true,
+      "review_reasons": [
+        "run ends with no award ever reported \u2014 start unknown",
+        "start_date unknown",
+        "venue never matched the spine \u2014 not mappable"
+      ],
+      "known_through": "2016-09-29",
+      "event_count": 1
+    }
+  },
+  {
     "tenure_id": "sp-1b1d922502",
     "venue_id": null,
     "venue_name": "SHSU",
@@ -1728,6 +2192,73 @@
     }
   },
   {
+    "tenure_id": "sp-438156e24d",
+    "venue_id": null,
+    "venue_name": "St. Cloud State University",
+    "venue_type": "other",
+    "city": null,
+    "state": null,
+    "lat": null,
+    "lng": null,
+    "operator": "Compass",
+    "operator_normalized": "Compass",
+    "start_date": "2016-07-01",
+    "start_precision": "exact",
+    "end_date": null,
+    "end_precision": null,
+    "end_status": "unknown",
+    "exit_mode": null,
+    "derived_from": [
+      "ev_a4e419c71e0ebe9b"
+    ],
+    "source": "|St. Cloud Times (1988-); St Cloud, Minnesota | 2016-07-31",
+    "notes": null,
+    "extras": {
+      "needs_review": true,
+      "review_reasons": [
+        "venue never matched the spine \u2014 not mappable"
+      ],
+      "known_through": "2016-07-01",
+      "event_count": 1,
+      "sub_brands": [
+        "Chartwells"
+      ]
+    }
+  },
+  {
+    "tenure_id": "sp-04eaebe0a5",
+    "venue_id": null,
+    "venue_name": "St. Cloud State University",
+    "venue_type": "other",
+    "city": null,
+    "state": null,
+    "lat": null,
+    "lng": null,
+    "operator": "Sodexo",
+    "operator_normalized": "Sodexo",
+    "start_date": null,
+    "start_precision": null,
+    "end_date": "2016-07-01",
+    "end_precision": "exact",
+    "end_status": "ended",
+    "exit_mode": "lost_bid",
+    "derived_from": [
+      "ev_5930aa3e2caa1e8e"
+    ],
+    "source": "|St. Cloud Times (1988-); St Cloud, Minnesota | 2016-07-31",
+    "notes": null,
+    "extras": {
+      "needs_review": true,
+      "review_reasons": [
+        "run ends with no award ever reported \u2014 start unknown",
+        "start_date unknown",
+        "venue never matched the spine \u2014 not mappable"
+      ],
+      "known_through": "2016-07-01",
+      "event_count": 1
+    }
+  },
+  {
     "tenure_id": "sp-7ed39b11fd",
     "venue_id": null,
     "venue_name": "St. Cloud State University's Garvey Commons",
@@ -1745,9 +2276,10 @@
     "end_status": "unknown",
     "exit_mode": null,
     "derived_from": [
-      "ev_4c95d6079be2a7e1"
+      "ev_4c95d6079be2a7e1",
+      "ev_d02bc1ca0e176742"
     ],
-    "source": "|St. Cloud Times; St. Cloud, Minn. | 2016-07-31",
+    "source": "|St. Cloud Times; St. Cloud, Minn. | 2016-07-31; |Star Tribune (1987-); Minneapolis | 2016-08-07",
     "notes": null,
     "extras": {
       "needs_review": true,
@@ -1759,6 +2291,39 @@
       "sub_brands": [
         "Chartwells"
       ]
+    }
+  },
+  {
+    "tenure_id": "sp-854dfd9b65",
+    "venue_id": null,
+    "venue_name": "St. Cloud State University's Garvey Commons",
+    "venue_type": "other",
+    "city": null,
+    "state": null,
+    "lat": null,
+    "lng": null,
+    "operator": "Sodexo",
+    "operator_normalized": "Sodexo",
+    "start_date": null,
+    "start_precision": null,
+    "end_date": "2016-07-01",
+    "end_precision": "exact",
+    "end_status": "ended",
+    "exit_mode": "other",
+    "derived_from": [
+      "ev_f793ed438714f93a"
+    ],
+    "source": "|Star Tribune (1987-); Minneapolis | 2016-08-07",
+    "notes": "contract expired; no cause reported",
+    "extras": {
+      "needs_review": true,
+      "review_reasons": [
+        "run ends with no award ever reported \u2014 start unknown",
+        "start_date unknown",
+        "venue never matched the spine \u2014 not mappable"
+      ],
+      "known_through": "2016-07-01",
+      "event_count": 1
     }
   },
   {
@@ -1791,6 +2356,106 @@
         "venue never matched the spine \u2014 not mappable"
       ],
       "known_through": "2016-07-01",
+      "event_count": 1
+    }
+  },
+  {
+    "tenure_id": "sp-64ad77d639",
+    "venue_id": null,
+    "venue_name": "State of Michigan",
+    "venue_type": "other",
+    "city": null,
+    "state": null,
+    "lat": null,
+    "lng": null,
+    "operator": "Aramark",
+    "operator_normalized": "Aramark",
+    "start_date": null,
+    "start_precision": null,
+    "end_date": "2005-01-01",
+    "end_precision": "year",
+    "end_status": "ended",
+    "exit_mode": "lost_bid",
+    "derived_from": [
+      "ev_d4fd7c63e8fe2194"
+    ],
+    "source": "|The Daily News-Journal (1931-); Murfreesboro, Tennessee | 2016-08-08",
+    "notes": null,
+    "extras": {
+      "needs_review": true,
+      "review_reasons": [
+        "run ends with no award ever reported \u2014 start unknown",
+        "start_date unknown",
+        "venue never matched the spine \u2014 not mappable"
+      ],
+      "known_through": "2005-01-01",
+      "event_count": 1
+    }
+  },
+  {
+    "tenure_id": "sp-465b90cf97",
+    "venue_id": null,
+    "venue_name": "state prison",
+    "venue_type": "other",
+    "city": null,
+    "state": null,
+    "lat": null,
+    "lng": null,
+    "operator": "Aramark Correctional Services",
+    "operator_normalized": "Aramark Correctional Services",
+    "start_date": null,
+    "start_precision": null,
+    "end_date": "2015-08-01",
+    "end_precision": "month",
+    "end_status": "ended",
+    "exit_mode": "lost_bid",
+    "derived_from": [
+      "ev_747111eb2864ee0a"
+    ],
+    "source": "|Lansing State Journal (1980-); Lansing, Michigan | 2016-09-09",
+    "notes": null,
+    "extras": {
+      "needs_review": true,
+      "review_reasons": [
+        "run ends with no award ever reported \u2014 start unknown",
+        "start_date unknown",
+        "venue never matched the spine \u2014 not mappable"
+      ],
+      "known_through": "2015-08-01",
+      "event_count": 1,
+      "sub_brands": [
+        "Aramark Correctional Services"
+      ]
+    }
+  },
+  {
+    "tenure_id": "sp-9be0178625",
+    "venue_id": null,
+    "venue_name": "state prison",
+    "venue_type": "other",
+    "city": null,
+    "state": null,
+    "lat": null,
+    "lng": null,
+    "operator": "Trinity Services Group",
+    "operator_normalized": "Trinity Services Group",
+    "start_date": "2015-08-01",
+    "start_precision": "month",
+    "end_date": null,
+    "end_precision": null,
+    "end_status": "unknown",
+    "exit_mode": null,
+    "derived_from": [
+      "ev_5a68ec6e61e06c11"
+    ],
+    "source": "|Lansing State Journal (1980-); Lansing, Michigan | 2016-09-09",
+    "notes": null,
+    "extras": {
+      "needs_review": true,
+      "review_reasons": [
+        "venue never matched the spine \u2014 not mappable"
+      ],
+      "known_through": "2015-08-01",
       "event_count": 1
     }
   },
@@ -1877,9 +2542,10 @@
     "derived_from": [
       "ev_7540d3607e1095f3",
       "ev_ca3c544be6203886",
-      "ev_460833386e6ebe56"
+      "ev_460833386e6ebe56",
+      "ev_38f6d7840d94cbee"
     ],
-    "source": "|University Wire; Carlsbad | 2016-12-29; |University Wire; Carlsbad | 2016-10-25; |University Wire; Carlsbad | 2016-10-18",
+    "source": "|University Wire; Carlsbad | 2016-12-29; |University Wire; Carlsbad | 2016-10-25; |University Wire; Carlsbad | 2016-10-18; |Philadelphia Inquirer (1969-); Philadelphia | 2016-10-12",
     "notes": null,
     "extras": {
       "needs_review": true,
@@ -1984,9 +2650,10 @@
     "exit_mode": "lost_bid",
     "derived_from": [
       "ev_aeaae025458e9c71",
-      "ev_03a0d8daf6924d03"
+      "ev_03a0d8daf6924d03",
+      "ev_766ed3b5fdf35201"
     ],
-    "source": "|University Wire; Carlsbad | 2016-10-25; |University Wire; Carlsbad | 2016-10-18",
+    "source": "|University Wire; Carlsbad | 2016-10-25; |University Wire; Carlsbad | 2016-10-18; |Philadelphia Inquirer (1969-); Philadelphia | 2016-10-12",
     "notes": null,
     "extras": {
       "needs_review": true,
@@ -2029,11 +2696,12 @@
       "ev_63eb07056ee90224",
       "ev_e50cf904efe27803",
       "ev_533e8e79627058b1",
+      "ev_aa5564b526693c0a",
       "ev_d8f59974003adf6e",
       "ev_34e141aaae716a04",
       "ev_d9fc15e40b846eb8"
     ],
-    "source": "|Fair Disclosure Wire; Linthicum | 2016-11-15; |MENA Report; Camden | 2016-10-14; |University Wire; Carlsbad | 2016-10-11; |University Wire; Carlsbad | 2017-01-17; |University Wire; Carlsbad | 2016-10-21; |US Fed News Service, Including US State News; Washington, D.C. | 2016-10-12; |TCA Regional News; Chicago | 2016-10-11; |University Wire; Carlsbad | 2016-12-06",
+    "source": "|Fair Disclosure Wire; Linthicum | 2016-11-15; |MENA Report; Camden | 2016-10-14; |University Wire; Carlsbad | 2016-10-11; |University Wire; Carlsbad | 2017-01-17; |University Wire; Carlsbad | 2016-10-21; |US Fed News Service, Including US State News; Washington, D.C. | 2016-10-12; |TCA Regional News; Chicago | 2016-10-11; |Philadelphia Inquirer (1969-); Philadelphia | 2016-10-12",
     "notes": null,
     "extras": {
       "needs_review": true,
@@ -2146,10 +2814,11 @@
       "ev_cec500d8fc1a792d",
       "ev_ec60d67dd3be98e5",
       "ev_031fc2394d4f02ae",
+      "ev_215149db3418951e",
       "ev_7beff567a0cffbea",
       "ev_a5eefc7e95315fce"
     ],
-    "source": "|University Wire; Carlsbad | 2016-10-21; |University Wire; Carlsbad | 2016-10-11; |TCA Regional News; Chicago | 2016-10-11; |Philadelphia Inquirer; Philadelphia, Pa. | 2016-11-01",
+    "source": "|University Wire; Carlsbad | 2016-10-21; |University Wire; Carlsbad | 2016-10-11; |TCA Regional News; Chicago | 2016-10-11; |Philadelphia Inquirer (1969-); Philadelphia | 2016-10-12; |Philadelphia Inquirer; Philadelphia, Pa. | 2016-11-01",
     "notes": null,
     "extras": {
       "needs_review": true,
@@ -2171,7 +2840,7 @@
     }
   },
   {
-    "tenure_id": "sp-be8aae8ba3",
+    "tenure_id": "sp-8bbe3b87a8",
     "venue_id": null,
     "venue_name": "Tennessee Department of Correction",
     "venue_type": "other",
@@ -2190,17 +2859,22 @@
     "derived_from": [
       "ev_d93165ae10ec1bd6",
       "ev_22f81347b12bfe06",
-      "ev_8745d01a1fc37af0"
+      "ev_8745d01a1fc37af0",
+      "ev_3fa52d81a0d88e57",
+      "ev_289ba7ed2739cabe",
+      "ev_5d292bc1ea22c613",
+      "ev_49f6179c09144ead"
     ],
-    "source": "|The Daily News Journal; Murfreesboro, Tenn. | 2016-08-08; |The Tennessean; Nashville, Tenn. | 2016-08-08; |News Sentinel; Knoxville, Tenn. | 2016-08-05",
+    "source": "|The Daily News Journal; Murfreesboro, Tenn. | 2016-08-08; |The Tennessean; Nashville, Tenn. | 2016-08-08; |News Sentinel; Knoxville, Tenn. | 2016-08-05; |The Leaf-Chronicle (1979-); Clarksville, Tennessee | 2016-08-08; |The Daily News-Journal (1931-); Murfreesboro, Tennessee | 2016-08-08; |The Tennessean (1972-); Nashville | 2016-08-08",
     "notes": null,
     "extras": {
       "needs_review": true,
       "review_reasons": [
+        "1 undated event(s) could not be placed on the timeline",
         "venue never matched the spine \u2014 not mappable"
       ],
       "known_through": "2016-10-01",
-      "event_count": 1
+      "event_count": 2
     }
   },
   {
@@ -2222,9 +2896,10 @@
     "exit_mode": "lost_bid",
     "derived_from": [
       "ev_535c9491784104c8",
-      "ev_874a10d680f7405a"
+      "ev_874a10d680f7405a",
+      "ev_e251a31037c3dd58"
     ],
-    "source": "|The Daily News Journal; Murfreesboro, Tenn. | 2016-08-08; |The Tennessean; Nashville, Tenn. | 2016-08-08",
+    "source": "|The Daily News Journal; Murfreesboro, Tenn. | 2016-08-08; |The Tennessean; Nashville, Tenn. | 2016-08-08; |The Tennessean (1972-); Nashville | 2016-08-08",
     "notes": null,
     "extras": {
       "needs_review": true,
@@ -2302,6 +2977,72 @@
       "sub_brands": [
         "Bon App\u00e9tit"
       ]
+    }
+  },
+  {
+    "tenure_id": "sp-af2aa847be",
+    "venue_id": null,
+    "venue_name": "the department",
+    "venue_type": "other",
+    "city": null,
+    "state": null,
+    "lat": null,
+    "lng": null,
+    "operator": "Aramark",
+    "operator_normalized": "Aramark",
+    "start_date": null,
+    "start_precision": null,
+    "end_date": null,
+    "end_precision": null,
+    "end_status": "unknown",
+    "exit_mode": null,
+    "derived_from": [
+      "ev_5987a411d53dab7a"
+    ],
+    "source": "|The Tennessean (1972-); Nashville | 2016-08-08",
+    "notes": null,
+    "extras": {
+      "needs_review": true,
+      "review_reasons": [
+        "1 undated event(s) could not be placed on the timeline",
+        "start_date unknown",
+        "venue never matched the spine \u2014 not mappable"
+      ],
+      "known_through": null,
+      "event_count": 1
+    }
+  },
+  {
+    "tenure_id": "sp-ddc534c181",
+    "venue_id": null,
+    "venue_name": "the department",
+    "venue_type": "other",
+    "city": null,
+    "state": null,
+    "lat": null,
+    "lng": null,
+    "operator": "TRICOR",
+    "operator_normalized": "TRICOR",
+    "start_date": null,
+    "start_precision": null,
+    "end_date": null,
+    "end_precision": null,
+    "end_status": "unknown",
+    "exit_mode": null,
+    "derived_from": [
+      "ev_ada9e2f7fda170b0"
+    ],
+    "source": "|The Tennessean (1972-); Nashville | 2016-08-08",
+    "notes": null,
+    "extras": {
+      "needs_review": true,
+      "review_reasons": [
+        "1 undated event(s) could not be placed on the timeline",
+        "start_date unknown",
+        "venue never matched the spine \u2014 not mappable"
+      ],
+      "known_through": null,
+      "event_count": 1
     }
   },
   {
@@ -2425,9 +3166,10 @@
     "exit_mode": null,
     "derived_from": [
       "ev_9894fba1b01080df",
+      "ev_658faf089a2d2235",
       "ev_a493acde83f2b7cf"
     ],
-    "source": "|Standard Times; San Angelo | 2016-09-12",
+    "source": "|Standard Times; San Angelo | 2016-09-12; |Standard Times (1928-); San Angelo, Texas | 2016-09-12",
     "notes": null,
     "extras": {
       "needs_review": true,
@@ -2595,9 +3337,10 @@
     "exit_mode": null,
     "derived_from": [
       "ev_0662e1683034e326",
-      "ev_121321515d6dd7e1"
+      "ev_121321515d6dd7e1",
+      "ev_2ef8f5b5be238d64"
     ],
-    "source": "|University Wire; Carlsbad | 2016-10-05; |Courier - Journal; Louisville, Ky. | 2016-09-21",
+    "source": "|University Wire; Carlsbad | 2016-10-05; |Courier - Journal; Louisville, Ky. | 2016-09-21; |The Courier-Journal (1923-); Louisville | 2016-09-21",
     "notes": null,
     "extras": {
       "needs_review": true,
@@ -3258,13 +4001,17 @@
     "derived_from": [
       "ev_151d52e651c23ef4",
       "ev_5655db073e1031e4",
+      "ev_64efa60cf7877d3b",
+      "ev_92a4f6990b5e30cd",
       "ev_9f9a1c4748b3765e",
       "ev_1576b0f6277181e2",
       "ev_cbf723b1238b2101",
       "ev_110022717d7259bb",
+      "ev_4457e59042ed8132",
+      "ev_385a03569145ac3a",
       "ev_4605d693ee6f70b1"
     ],
-    "source": "|Fair Disclosure Wire; Linthicum | 2016-11-15; |Philadelphia Daily News; Philadelphia, Pa. | 2016-11-03; |Philadelphia Inquirer; Philadelphia, Pa. | 2016-11-01; |TCA Regional News; Chicago | 2016-10-31; |University Wire; Carlsbad | 2016-10-28",
+    "source": "|Fair Disclosure Wire; Linthicum | 2016-11-15; |Philadelphia Daily News; Philadelphia, Pa. | 2016-11-03; |Philadelphia Daily News (1960-); Philadelphia, Pennsylvania | 2016-11-03; |Philadelphia Inquirer (1969-); Philadelphia | 2016-11-16; |Philadelphia Inquirer; Philadelphia, Pa. | 2016-11-01; |TCA Regional News; Chicago | 2016-10-31; |University Wire; Carlsbad | 2016-10-28; |Philadelphia Inquirer (1969-); Philadelphia | 2016-11-01",
     "notes": null,
     "extras": {
       "needs_review": true,
@@ -3291,8 +4038,8 @@
     "lng": -75.188686,
     "operator": "Sodexo",
     "operator_normalized": "Sodexo",
-    "start_date": "2015-05-01",
-    "start_precision": "month",
+    "start_date": "2015-05-21",
+    "start_precision": "exact",
     "end_date": "2016-09-20",
     "end_precision": "exact",
     "end_status": "ended",
@@ -3300,10 +4047,11 @@
     "derived_from": [
       "ev_54bf40d031fa7244",
       "ev_33650d0abe13f0c7",
+      "ev_f5bcd4d07bfd25e2",
       "ev_27cf5d4cc3acfdd0",
       "ev_5ff1a8e1a957888c"
     ],
-    "source": "|Food Management; Cleveland | 2016-10-20; |The Daily Record; Baltimore, Md. | 2016-10-10; |University Wire; Carlsbad | 2016-10-28",
+    "source": "|Food Management; Cleveland | 2016-10-20; |The Daily Record; Baltimore, Md. | 2016-10-10; |Philadelphia Inquirer (1969-); Philadelphia | 2016-10-11; |University Wire; Carlsbad | 2016-10-28",
     "notes": null,
     "extras": {
       "needs_review": true,
@@ -3342,9 +4090,10 @@
       "ev_a37bafd56fdad641",
       "ev_66dd1c7bd79cd51c",
       "ev_b65daccf305ed6ec",
-      "ev_9b69752e4110e409"
+      "ev_9b69752e4110e409",
+      "ev_cc8ebaa2e87c3f73"
     ],
-    "source": "|Food Management; Cleveland | 2016-10-20; |University Wire; Carlsbad | 2016-10-21; |University Wire; Carlsbad | 2016-10-06",
+    "source": "|Food Management; Cleveland | 2016-10-20; |University Wire; Carlsbad | 2016-10-21; |University Wire; Carlsbad | 2016-10-06; |Philadelphia Inquirer (1969-); Philadelphia | 2016-10-11",
     "notes": "contract expired; no cause reported",
     "extras": {
       "needs_review": true,
@@ -3385,9 +4134,11 @@
       "ev_eb06480d77146771",
       "ev_a7cc8b521b277db2",
       "ev_6beccbcecdd23ea5",
-      "ev_f6b5a2138034d929"
+      "ev_f6b5a2138034d929",
+      "ev_9d6297b9090ee992",
+      "ev_f72357eb884f8243"
     ],
-    "source": "|University Wire; Carlsbad | 2016-10-25; |Philadelphia Inquirer; Philadelphia, Pa. | 2016-11-01; |TCA Regional News; Chicago | 2016-10-31",
+    "source": "|University Wire; Carlsbad | 2016-10-25; |Philadelphia Inquirer; Philadelphia, Pa. | 2016-11-01; |TCA Regional News; Chicago | 2016-10-31; |Philadelphia Inquirer (1969-); Philadelphia | 2016-11-01",
     "notes": null,
     "extras": {
       "needs_review": true,
@@ -3488,11 +4239,12 @@
       "ev_556e2b87ec155c0b",
       "ev_afcf646fb820ea39",
       "ev_0e17dc4174d54b02",
+      "ev_30169bf1e95fb9e4",
       "ev_1d9b218f0ccdcaa8",
       "ev_a4f21430519ab961",
       "ev_0d78ee36e0ac1ed1"
     ],
-    "source": "|Fair Disclosure Wire; Linthicum | 2016-11-15; |Star Tribune; Minneapolis, Minn. | 2016-11-03; |Star Tribune; Minneapolis, Minn. | 2016-11-02; |TCA Regional News; Chicago | 2016-11-02; |TCA Regional News; Chicago | 2016-11-03",
+    "source": "|Fair Disclosure Wire; Linthicum | 2016-11-15; |Star Tribune; Minneapolis, Minn. | 2016-11-03; |Star Tribune (1987-); Minneapolis | 2016-11-03; |Star Tribune; Minneapolis, Minn. | 2016-11-02; |TCA Regional News; Chicago | 2016-11-02; |TCA Regional News; Chicago | 2016-11-03",
     "notes": null,
     "extras": {
       "needs_review": true,

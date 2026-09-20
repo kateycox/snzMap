@@ -8,6 +8,132 @@ Everything below is a number this repo can reproduce. Commands to re-derive them
 
 ---
 
+## Queued — the USB batch (added 2026-09-19, directed by Katey)
+
+**Update 2026-09-19 (evening): SPEND CANCELLED — the batch is a re-delivery, not new data.**
+Katey approved the $12.85 and the spend run was started, but a pre-spend hash check stopped
+it: all 4 usable text files in `inbox/usb-sept-2026/` are **byte-identical (sha256) to
+`usb1`** — the corpus that already produced the 178 live events (same filenames, same
+July-29-2026 export dates; `output/ingest_manifest_usb1.json` vs
+`ingest_manifest_usb-sept-2026.json`). The $12.85 quote appears only because the extraction
+cache keys on the article's *path* (`article_key` = sha256 of `source_file|source_offset`,
+`extract/run.py`) and the raw folder was relabeled usb1 → usb-sept-2026 — and because the
+original run's responses aren't in `raw/extract/` (1 file there, from the web queue).
+Spending would re-bill the same 366 articles, re-produce ~the same 178 events with
+model-nondeterminism churn against the audited set, and add ~0 new events. **$0 spent.**
+Still genuinely new in the batch: the 236 page scans (separate OCR/webqueue track) and the
+3 skipped `.xls` investment-analysis files (tabular track, never quoted).
+
+The dry-run measurements, kept for reference (now understood as re-measuring usb1):
+
+```
+602  articles, from 4 usable files
+     (two ProQuest RTF exports split cleanly — 497 Aramark, 99 Sodexho —
+      plus 2 EBSCO .docx; 3 .xls skipped as non-article formats)
+366  have a real text layer  -> quoted $12.85 (3.5¢/article) — AWAITING KATEY'S GO
+236  are page scans, no text -> not quoted, not billable yet
+```
+
+The one scan sampled by eye was a classified-ad page — a Sodexo Clinical Dietitian
+posting that pins Sodexo to Andalusia Health, AL in Dec 2016. Katey's read, adopted:
+**job postings are contract-in-force evidence** (who held a contract, where, when), so
+the scans are not junk. OCR is free (local tesseract; money only moves at extraction
+after OCR) — expected second quote ~$8 for the 236 at the measured rate. Measured yield
+from the prior corpus: 178 events from 366 articles (~0.49/article, ≈7¢/event).
+
+The original decisions, kept for reference:
+
+**The drop point.** Katey uploads the folder through the Zo file browser to
+`snzMap/inbox/<label>/` — create `inbox/` on first use, pick a batch label
+(`usb-sept-2026` or similar). Nothing watches this folder; files landing there cost
+nothing and change nothing until a person runs the pipeline.
+
+**The run.** Two routes, chosen by what the batch turns out to contain:
+
+- **Text-layer docs** (`.txt` `.html` `.rtf` `.docx`, PDFs with real text):
+  `pipeline.add inbox/<label>` — free stages run (copy, hash, parse), the extraction
+  cost is quoted, and it stops. Katey approves, re-run with `--spend`.
+- **Scans:** `pipeline.add` has **no OCR step, on purpose** (see the note in
+  `pipeline/ingest/collect.py`) — it records scans as skipped. Scans must instead go
+  through the web-queue path, which stores, OCRs (tesseract, free) and quotes — never
+  refuses (ACCESS_OCR_SPEC.md). Either re-upload just the scans via `/add`, or run the
+  webqueue machinery against the inbox folder server-side — verified 2026-09-19: create
+  a batch (`pipeline.webqueue create`), copy the scans into its `incoming/files/` dir,
+  then `pipeline.webqueue ingest` OCRs them (tesseract) and quotes as normal. Decide
+  after the dry run shows the mix.
+
+**Cost.** Copy, hash, parse and OCR are free. Extraction is the paid stage:
+~3.5¢/article against the Anthropic key in `console/.env` — **not** Zo chat credits.
+The response cache means re-running the same batch never pays twice.
+
+**Decided 2026-09-19: this IS the recurring intake path, not an experiment.** Once the
+spend run confirms end-to-end: (1) write it into ADDING_DATA.md as the Zo-folder variant
+of Path A, and (2) make the scan detour first-class — teach `pipeline.add` to route the
+scans it currently records as skipped into the webqueue OCR machinery itself, so a mixed
+batch is one command instead of a command plus a manual copy. Until (2) is built, the
+webqueue copy steps above are the documented workaround.
+
+---
+
+## Queued — pattern discovery pass (added 2026-09-19, directed by Katey; run in its own chat)
+
+**Update 2026-09-20: DONE — findings in `snzMap/DISCOVERY.md`.** OCR finished (202/224
+scans usable), job-posting classifier confirmed the classifieds signal (6 operator ads),
+19 scan citations upgraded to real headlines, per-page OCR text preserved at
+`pipeline/output/scans_ocr.jsonl`. Schema-extension verdicts at the end of DISCOVERY.md —
+four fields justify batching with build C; the rest are free post-hoc passes.
+
+Katey's framing, verbatim in spirit: *"what patterns am I not thinking about or
+uncovering? I don't know what I don't know."*
+
+This is a **different job from ingestion** and must not be bolted onto it. The extractor
+is schema-first — it finds only what the prompt asks for (contract events against the
+venue spine), which is exactly why its numbers can be trusted and exactly why it will
+never surface a pattern nobody thought to ask about. Discovery is corpus-first: read
+*across* `pipeline/output/articles.json`, `contract_events.json` and the tenure records
+looking for recurring structure the schema has no field for. Candidate directions, none
+yet checked:
+
+- Job postings as contract-in-force timestamps (already spotted by eye — the Andalusia
+  Health scan above; there may be hundreds more in the classifieds pages)
+- Operator transitions: who replaces whom, and whether losses cluster before rebids
+- Timing structure — RFP/renewal cycles, seasonal announcement patterns
+- Geographic clustering by operator, sector bleed (the 83% finding below is itself a
+  discovered pattern of this kind)
+- Recurring co-mentions: named execs, union locals, foodservice consultants
+
+**Cost shape.** Starting costs nothing from the pipeline's API key — the discovery chat
+reads and reasons on Katey's Zo/subscription credit, and the corpus is parsed, local
+text. Money enters the *pipeline's* key only if discovery justifies *extending the
+extraction schema*, and that has the same economics as build C: a changed prompt misses
+the entire response cache, so a full re-extraction (~$13). **Therefore: batch any schema
+extension with C**, never ship it alone.
+
+**How the discovery chat should work** (decided with Katey 2026-09-19):
+
+1. **Read the parsed corpus, not the raw inbox.** `snzMap/inbox/usb-sept-2026/` is
+   953MB of RTF image bloat; the same 602 articles exist as clean text in
+   `pipeline/output/articles.json`. Same content, readable, free.
+2. **OCR the 236 scans first — free, local tesseract** — so discovery mines the whole
+   corpus including the classifieds pages (the job-posting signal lives there). This is
+   independent of any extraction spend decision.
+3. **Findings land as a file**, `snzMap/DISCOVERY.md` (or similar), so the console work
+   inherits a document, not a chat memory. The console chat then decides what becomes a
+   schema extension (→ batch with C), a map layer, or a note.
+
+**Recommended prompt for the discovery chat:**
+
+> Read the "pattern discovery pass" section of `snzMap/NEXT_STEPS.md` and follow its
+> three-step shape. Explore the corpus in `pipeline/output/` — articles, events, tenure
+> records — as raw material, not through the extraction schema. OCR the page scans
+> locally (free) so they're included. Surface 5–10 candidate patterns the current
+> schema cannot express, with counts and concrete examples from the data for each.
+> Spend nothing against the pipeline's API key; local analysis only. Write the findings
+> to `snzMap/DISCOVERY.md`, ending with: which patterns would justify a schema
+> extension, and what each would add to the map.
+
+---
+
 ## The finding that motivates both
 
 **83% of what the pipeline extracted names a place this map is not a census of.**
